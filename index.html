@@ -44,11 +44,12 @@
   --wall-1: #5a3a3a; --wall-2: #3e2e45; --wall-3: #262640; --wall-4: #121420;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; }
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+:root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); --mb: calc(28px + var(--sat)); }
 body {
   background: var(--bg); color: var(--ink);
   font: 14px/1.55 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 button, select, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -57,7 +58,8 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .small { font-size: 12px; }
 
 /* ---------- 屏幕与壁纸 ---------- */
-#screen { position: fixed; inset: 0; overflow: hidden; }
+/* 高度由脚本按 visualViewport 设置：手机地址栏收起/弹出、键盘弹起时都贴合可见区域 */
+#screen { position: fixed; top: 0; left: 0; right: 0; height: 100%; height: 100dvh; overflow: hidden; }
 #wall {
   position: absolute; inset: 0;
   background:
@@ -79,8 +81,8 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 
 /* ---------- 菜单栏 ---------- */
 #menubar {
-  position: absolute; top: 0; left: 0; right: 0; height: 28px; z-index: 600;
-  display: flex; align-items: center; gap: 14px; padding: 0 12px; font-size: 13px;
+  position: absolute; top: 0; left: 0; right: 0; height: var(--mb); z-index: 600;
+  display: flex; align-items: center; gap: 14px; padding: var(--sat) max(12px, var(--sar)) 0 max(12px, var(--sal)); font-size: 13px;
   background: var(--bar); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
   border-bottom: 1px solid rgba(0, 0, 0, .06);
 }
@@ -99,11 +101,11 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .dicon .ico { width: 48px; height: 48px; margin: 0 auto 4px; border-radius: 10px; display: grid; place-items: center; font-size: 26px; text-shadow: none; }
 
 /* ---------- 窗口 ---------- */
-#wins { position: absolute; inset: 28px 0 0 0; }
+#wins { position: absolute; top: var(--mb); left: 0; right: 0; bottom: 0; }
 .win {
   position: absolute; display: none; flex-direction: column; overflow: hidden;
   background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid rgba(0, 0, 0, .08);
-  min-width: 300px; min-height: 200px;
+  min-width: 300px; min-height: 200px; overflow: clip;
 }
 .win.open { display: flex; animation: winIn .18s ease-out; }
 @keyframes winIn { from { transform: scale(.96); opacity: 0 } to { transform: none; opacity: 1 } }
@@ -123,13 +125,13 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 
 /* ---------- Dock ---------- */
 #dock {
-  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 500;
+  position: absolute; left: 50%; bottom: calc(10px + var(--sab)); transform: translateX(-50%); z-index: 500;
   display: flex; gap: 6px; padding: 6px 8px; border-radius: 18px;
   background: var(--dock); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
   border: 1px solid rgba(255, 255, 255, .25); box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
 }
 .dk { position: relative; width: 52px; height: 52px; border: 0; padding: 0; background: none; border-radius: 13px; transition: transform .15s; }
-.dk:hover { transform: translateY(-6px) scale(1.08); }
+@media (hover: hover) { .dk:hover { transform: translateY(-6px) scale(1.08); } .dk:hover .tip { opacity: 1; } }
 .dk .ico { width: 100%; height: 100%; border-radius: 13px; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25), 0 2px 6px rgba(0, 0, 0, .2); }
 .dk .dot { position: absolute; bottom: -5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); opacity: 0; }
 .dk.running .dot { opacity: .7; }
@@ -138,7 +140,6 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .dk.bounce { animation: bounce .7s ease 3; }
 @keyframes bounce { 0%, 100% { transform: none } 40% { transform: translateY(-16px) } }
 .dk .tip { position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%); background: var(--panel); color: var(--ink); padding: 2px 8px; border-radius: 6px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .2); transition: opacity .15s; }
-.dk:hover .tip { opacity: 1; }
 .i-group { background: linear-gradient(160deg, #5fd36b, #23a046); }
 .i-set { background: linear-gradient(160deg, #9aa1a8, #5f666d); }
 .i-web { background: linear-gradient(160deg, #e8875f, #c2603f); }
@@ -150,7 +151,7 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .i-bin { background: linear-gradient(160deg, #e0e6ea, #a8b3ba); }
 
 /* ---------- 通知 ---------- */
-#notifs { position: absolute; top: 36px; right: 12px; z-index: 700; display: flex; flex-direction: column; gap: 8px; width: 340px; max-width: calc(100% - 24px); pointer-events: none; }
+#notifs { position: absolute; top: calc(var(--mb) + 8px); right: 12px; z-index: 700; display: flex; flex-direction: column; gap: 8px; width: 340px; max-width: calc(100% - 24px); pointer-events: none; }
 .nt {
   display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; cursor: pointer; pointer-events: auto;
   background: var(--bar); backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6);
@@ -205,7 +206,7 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 @keyframes fadeIn { to { opacity: 1 } }
 
 /* ---------- 弹窗 ---------- */
-#modal { z-index: 750; background: rgba(0, 0, 0, .18); padding: 16px; }
+#modal { z-index: 750; background: rgba(0, 0, 0, .18); padding: calc(12px + var(--sat)) 12px calc(12px + var(--sab)); }
 #modal.on { display: grid; place-items: center; }
 .alert { width: 300px; max-width: 100%; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 18px 14px; text-align: center; animation: winIn .18s ease-out; }
 .alert .aico { font-size: 40px; line-height: 1; margin-bottom: 8px; }
@@ -214,7 +215,7 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .alert .btns { display: flex; flex-direction: column; gap: 6px; }
 .alert .btns button { border: 0; border-radius: 8px; padding: 7px 10px; background: var(--chip); }
 .alert .btns button:hover { background: var(--line); }
-.sheet { width: 560px; max-width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; animation: winIn .2s ease-out; }
+.sheet { width: 560px; max-width: 100%; max-height: calc(100% - 8px); overflow-y: auto; overscroll-behavior: contain; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; animation: winIn .2s ease-out; }
 .sheet h2 { margin: 0 0 6px; font-size: 20px; }
 .sheet .big { font-size: 20px; font-weight: 600; line-height: 1.5; margin: 4px 0 12px; }
 .sheet .rules { padding-left: 18px; }
@@ -251,7 +252,7 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .chip.ok { outline: 2px solid var(--ok); outline-offset: 1px; }
 .chip.miss { outline: 2px dashed var(--danger); outline-offset: 1px; }
 .row { display: flex; flex-wrap: wrap; gap: 6px; }
-.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 
 /* ---------- 群聊 ---------- */
 .g-side { width: 190px; flex: none; border-right: 1px solid var(--line); background: var(--panel-2); }
@@ -394,19 +395,26 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg) } }
 
 /* ---------- 手机 / 窄屏 ---------- */
-@media (max-width: 760px) {
-  #menubar { gap: 8px; padding: 0 10px; }
+/* 手机（竖屏窄、或横屏矮）：窗口全屏，Dock 贴底 */
+@media (max-width: 760px), (max-height: 500px) {
+  #menubar { gap: 8px; }
   #menubar .menus { display: none; }
   #menubar .right { gap: 8px; }
-  #wins { bottom: 76px; }
+  #wins { bottom: calc(76px + var(--sab)); }
+  /* iOS 会放大字号小于 16px 的输入框，所以手机上统一 16px */
+  input, select, textarea { font-size: 16px !important; }
+  .lights { gap: 12px; }
+  .lights i { width: 16px; height: 16px; }
+  .lights::before { content: ""; position: absolute; inset: -12px -8px; }
+  .term { font-size: 13px; }
   .win { left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; border: 0; min-width: 0; }
   .tbar { height: 40px; }
-  #dock { left: 8px; right: 8px; transform: none; bottom: 8px; justify-content: space-between; overflow-x: auto; gap: 2px; padding: 6px; }
+  #dock { left: max(8px, var(--sal)); right: max(8px, var(--sar)); transform: none; bottom: calc(8px + var(--sab)); justify-content: space-between; overflow-x: auto; overflow-y: hidden; gap: 2px; padding: 6px; }
   .dk { width: 44px; height: 44px; flex: none; }
   .dk .ico { font-size: 21px; }
   .dk:hover { transform: none; }
   .dk .tip { display: none; }
-  #desk { top: 40px; right: auto; left: 12px; flex-direction: row; flex-wrap: wrap; }
+  #desk { top: calc(var(--mb) + 12px); right: auto; left: max(12px, var(--sal)); flex-direction: row; flex-wrap: wrap; }
   .g-side, .m-side { display: none; }
   .s-wrap { flex-direction: column; }
   .s-side { width: auto; display: flex; overflow-x: auto; overflow-y: hidden; flex: none; border-right: 0; border-bottom: 1px solid var(--line); padding: 6px; gap: 4px; }
@@ -417,11 +425,57 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
   .m-wrap:not(.reading) .m-read { display: none; }
   .m-back { display: inline-block; margin-bottom: 8px; }
   .tasks { grid-template-columns: 1fr; }
-  #phone { left: 50%; right: auto; margin-left: -125px; bottom: 90px; }
+  #phone { left: 50%; right: auto; margin-left: -125px; bottom: calc(86px + var(--sab)); max-height: calc(100% - var(--mb) - 96px - var(--sab)); }
   #notifs { left: 12px; right: 12px; width: auto; max-width: none; }
   .a-stats { grid-template-columns: repeat(2, 1fr); }
-  .c-tools select { max-width: calc(50% - 4px); }
+  /* 手机上输入区只占一行下拉框：横向滑动，发送键钉在右侧，把高度留给对话 */
+  .c-tools { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+  .c-tools select { flex: none; max-width: none !important; }
+  .c-send { position: sticky; right: 0; flex: none; box-shadow: -8px 0 8px var(--panel-2); }
+  .c-input { max-height: 66px; }
+  .c-comp { padding: 0 10px 8px; }
+  .c-msgs { padding: 14px 12px; }
   #bsod .row { flex-direction: column; }
+  #bsod .in { padding-top: calc(6vh + var(--sat)); padding-bottom: calc(24px + var(--sab)); }
+  #bsod .sad { font-size: 80px; }
+  #bsod .big { font-size: 18px; }
+}
+/* 很窄的屏（小屏手机、折叠屏外屏） */
+@media (max-width: 380px) {
+  #menubar .app { display: none; }
+  #menubar .wk { display: none; }
+  .dk { width: 40px; height: 40px; }
+  .dk .ico { font-size: 19px; border-radius: 11px; }
+}
+/* 横屏手机：高度很紧，Dock 和来电都缩小 */
+@media (max-height: 500px) {
+  #wins { bottom: calc(58px + var(--sab)); }
+  #dock { padding: 4px 6px; bottom: calc(4px + var(--sab)); left: 50%; right: auto; transform: translateX(-50%); gap: 8px; }
+  .dk { width: 40px; height: 40px; }
+  .dk .ico { font-size: 19px; }
+  .tbar { height: 34px; }
+  #phone { height: 300px; width: 420px; margin-left: -210px; bottom: calc(60px + var(--sab)); border-radius: 26px; }
+  #phone .scr { padding: 14px 16px; border-radius: 20px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr; column-gap: 14px; text-align: left; align-items: center; }
+  #phone .notch, #phone .ptime { display: none; }
+  #phone .cav { grid-row: 1 / 3; margin: 0; width: 56px; height: 56px; font-size: 26px; }
+  #phone .pbtns { grid-column: 1 / 3; align-self: end; }
+  #lock .in { padding-top: calc(3vh + var(--sat)); }
+  #lock .time { font-size: 56px; }
+  #lock .lnote { display: none; }
+  #lock .who { padding-top: 8px; }
+  .c-input { min-height: 0; max-height: 42px; font-size: 13px; }
+  .c-msgs { padding: 10px 16px; gap: 10px; }
+  /* 横屏时输入区压成一行：下拉框横向滑动，发送键钉在右侧 */
+  .c-hint, .c-foot { display: none; }
+  .c-comp { padding: 0 10px 6px; }
+  .c-box { padding: 6px 8px; border-radius: 12px; }
+  .c-tools { margin-top: 4px; }
+  .c-send { width: 32px; height: 32px; }
+  .b-bar { display: none; }
+  .tbar { height: 30px; }
+  .c-head { padding: 3px 16px; }
+  .c-input { max-height: 36px; }
+  .s-main, .m-read { padding: 10px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
@@ -634,7 +688,8 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-const narrow = () => window.innerWidth <= 760;
+const NARROW_MQ = window.matchMedia('(max-width: 760px), (max-height: 500px)');
+const narrow = () => NARROW_MQ.matches;
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -783,8 +838,8 @@ const realTime = () => fmt(S.clock);
 const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 function updateMenubar() {
-  if (!S) { const d = new Date(); $('mb-clock').textContent = WEEK[d.getDay()] + ' ' + fmt(d.getHours() * 60 + d.getMinutes()); return; }
-  $('mb-clock').textContent = WEEK[new Date().getDay()] + ' ' + sysTime();
+  if (!S) { const d = new Date(); $('mb-clock').innerHTML = `<span class="wk">${WEEK[d.getDay()]} </span>${fmt(d.getHours() * 60 + d.getMinutes())}`; return; }
+  $('mb-clock').innerHTML = `<span class="wk">${WEEK[new Date().getDay()]} </span>${sysTime()}`;
   $('mb-ime').textContent = S.env.ime === 'on' ? '拼' : 'ABC';
   const vpn = $('mb-vpn');
   if (S.env.region === 'none') { vpn.textContent = 'VPN 未连接'; vpn.classList.add('off'); }
@@ -1267,7 +1322,7 @@ function pageChat() {
     <div class="c-msgs scroll" id="c-msgs"></div>
     <div class="c-comp"><div class="c-box">
       <div class="c-input" id="c-input"></div>
-      <div class="small muted" style="margin-top:4px">用下面的选项拼出这条消息，然后发送。</div>
+      <div class="small muted c-hint" style="margin-top:4px">用下面的选项拼出这条消息，然后发送。</div>
       <div class="c-tools" id="c-tools">
         ${COMPOSER.map(([k, label, opts]) => `<select data-k="${k}" aria-label="${label}">${opts.map(([v, t]) => `<option value="${v}" ${S.picks[k] === v ? 'selected' : ''}>${label}：${t}</option>`).join('')}</select>`).join('')}
         <button class="c-send" id="c-send" aria-label="发送">↑</button>
@@ -2031,14 +2086,31 @@ function renderAch() {
 
 buildShell();
 // 窗口大小变化时只把窗口挪回可见范围，不重置用户拖过的位置
-window.addEventListener('resize', () => Object.keys(APPS).forEach(id => {
-  const w = $('w-' + id);
-  if (narrow() || w.dataset.max) return;
-  w.style.width = Math.min(parseInt(w.style.width), window.innerWidth - 20) + 'px';
-  w.style.height = Math.min(parseInt(w.style.height), window.innerHeight - 28 - 90) + 'px';
-  w.style.left = clamp(parseInt(w.style.left), 0, Math.max(0, window.innerWidth - w.offsetWidth)) + 'px';
-  w.style.top = clamp(parseInt(w.style.top), 0, Math.max(0, window.innerHeight - 28 - 90 - 40)) + 'px';
-}));
+let wasNarrow = narrow();
+function onResize() {
+  // 手机浏览器：屏幕高度跟着可见区域走（地址栏伸缩、键盘弹起），并防止页面被整体顶上去
+  const vv = window.visualViewport;
+  $('screen').style.height = (vv ? vv.height : window.innerHeight) + 'px';
+  if (window.scrollY) window.scrollTo(0, 0);
+  if (narrow()) { wasNarrow = true; return; }
+  if (wasNarrow) {   // 从手机布局转到桌面布局（比如平板转屏）：重新摆放窗口
+    wasNarrow = false;
+    Object.keys(APPS).forEach((id, i) => { delete $('w-' + id).dataset.max; placeWin(id, i); });
+    return;
+  }
+  Object.keys(APPS).forEach(id => {
+    const w = $('w-' + id);
+    if (w.dataset.max) return;
+    w.style.width = Math.min(parseInt(w.style.width), window.innerWidth - 20) + 'px';
+    w.style.height = Math.min(parseInt(w.style.height), window.innerHeight - 28 - 90) + 'px';
+    w.style.left = clamp(parseInt(w.style.left), 0, Math.max(0, window.innerWidth - w.offsetWidth)) + 'px';
+    w.style.top = clamp(parseInt(w.style.top), 0, Math.max(0, window.innerHeight - 28 - 90 - 40)) + 'px';
+  });
+}
+window.addEventListener('resize', onResize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 250));
+onResize();
 
 // 安卓返回键：先关弹窗以外的最前面那个窗口；没有窗口可关时才交给系统（退出）
 window.__back = () => {
