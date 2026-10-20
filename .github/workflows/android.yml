@@ -74,5 +74,5 @@ jobs:
           name: 不被封的一天 ${{ inputs.release_tag || github.ref_name }}
           body: |
             - 网页版：https://deepshawn.github.io/American/
-            - 安卓：`bubeifeng-arm64-v8a.apk`（arm64-v8a，Android 8.0+，离线可玩，无需任何权限）
+            - 安卓：`bubeifeng-arm64-v8a.apk`（arm64-v8a，Android 8.0+，离线可玩，不联网，只用到震动）
           files: android/dist/bubeifeng-arm64-v8a.apk
