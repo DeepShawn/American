@@ -321,6 +321,20 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
 .tcard:hover { border-color: var(--accent); }
 .tcard b { display: block; margin-bottom: 4px; }
 .tcard span { font-size: 12px; color: var(--muted); }
+.c-wrap { flex: 1; display: flex; min-height: 0; position: relative; }
+.c-side { width: 210px; flex: none; border-right: 1px solid var(--line); background: var(--panel-2); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+.c-new { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 10px; text-align: left; margin-bottom: 8px; font-weight: 600; }
+.c-new:hover { border-color: var(--accent); }
+.c-it { border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+.c-it.on { background: var(--chip); font-weight: 600; }
+.c-sidefoot { margin-top: auto; padding: 8px 10px 0; }
+.ok { color: var(--ok); }
+.c-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.c-menu { display: none; border: 0; background: none; font-size: 18px; padding: 0 4px; line-height: 1; }
+.c-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-off { margin: 0 0 0 4px; padding: 3px 10px; font-size: 12px; flex: none; }
+.c-off.ready { background: var(--ok); border-color: var(--ok); color: #fff; }
+.c-say { font-weight: 600; flex: 1 1 100%; max-width: 100% !important; }
 .c-head { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 13px; }
 .c-head .q { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .c-prog { height: 2px; background: var(--line); flex: none; }
@@ -424,7 +438,12 @@ button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-colo
   .m-wrap.reading .m-list { display: none; }
   .m-wrap:not(.reading) .m-read { display: none; }
   .m-back { display: inline-block; margin-bottom: 8px; }
-  .tasks { grid-template-columns: 1fr; }
+  .tasks { grid-template-columns: 1fr 1fr; }
+  .c-side { position: absolute; top: 0; bottom: 0; left: 0; width: 76%; max-width: 280px; z-index: 5; transform: translateX(-105%); transition: transform .2s; box-shadow: 0 0 30px rgba(0, 0, 0, .25); }
+  .c-side.open { transform: none; }
+  .c-menu { display: inline-block; }
+  .c-head { padding-left: 10px; padding-right: 10px; }
+  .c-say { flex: none; max-width: 78vw !important; }
   #phone { left: 50%; right: auto; margin-left: -125px; bottom: calc(86px + var(--sab)); max-height: calc(100% - var(--mb) - 96px - var(--sab)); }
   #notifs { left: 12px; right: 12px; width: auto; max-width: none; }
   .a-stats { grid-template-columns: repeat(2, 1fr); }
@@ -581,56 +600,204 @@ const JOKES = [
   '你终于摸清了判官的规则。判官当晚就换了。',
 ];
 
+// 每个任务是一段可以连着聊下去的对话：steps[i] 是第 i 轮可以说的几句话（[中文, 英文, Claude 的回答]）。
+// 九宫格错别字、复制粘贴、中英混这几种说法，都由这里的中英文自动生成。
 const TASKS = {
   email: {
-    label: '写邮件', icon: '✉️', blurb: '给房东写封邮件，暖气坏了',
-    en: 'Help me write an email to my landlord about the broken heater',
-    zh: '帮我给房东写封邮件说暖气坏了',
-    typo: '帮窝给方东写风油件说暖器坏乐',
-    paste: '【转发】房东说暖气的事让我发邮件给他，帮我写一下',
-    replies: [
-      'Subject: Heater Repair Request\n\nDear Mr. Miller,\nI hope you are well. The heater in my unit stopped working on Monday…',
-      '我把语气调得更客气了一点，并加上了“希望本周内能安排维修”。',
-      '加了一句附言：如果需要，我可以在工作日上午开门。',
-      '补上了租约条款的引用，房东不好再拖了。',
-      '最终版已整理好。你可以直接复制发送。',
-      '另外，我顺手帮你写了一封备用的——以防房东也不回你。',
-      '没有别的需要了吗？我一直都在。',
+    label: '写邮件', icon: '✉️', blurb: '暖气坏了，房东不回消息',
+    steps: [
+      [['帮我给房东写封邮件，说暖气坏了', 'Can you help me write an email to my landlord? The heater is broken',
+        'Subject: Heater Not Working — Repair Request\n\nHi Mr. Miller,\n\nI wanted to let you know that the heater in Unit 4B stopped working on Monday. Could you arrange a repair at your earliest convenience?\n\nThanks,\nJohn'],
+       ['房东一直不回消息，我想写封邮件催他修暖气', 'My landlord keeps ignoring me. I need an email asking him to fix the heater',
+        '明白，语气要礼貌但坚定：\n\nSubject: Second Request: Heater Repair\n\nHi Mr. Miller,\n\nI’m following up on my message from last week. The heater is still not working, and the nights are getting colder. Please let me know when a technician can come by.']],
+      [['语气再客气一点', 'Make it a bit more polite',
+        '改好了：开头加了一句 “I hope you’re doing well”，把 “Please let me know” 换成了 “Would you be able to let me know”。'],
+       ['加一个期限，这周五之前', 'Add a deadline — by this Friday',
+        '加上了：“I would really appreciate it if the repair could be scheduled by this Friday, as the nights are getting quite cold.” 有期限，但不咄咄逼人。']],
+      [['需要提到租约条款吗？', 'Should I mention the lease terms?',
+        '可以，但点到为止：“As outlined in Section 7 of our lease, the landlord is responsible for maintaining heating.” 引用条款会让对方更重视。'],
+       ['要不要抄送物业公司？', 'Should I CC the property management company?',
+        '如果房东本人一直不回，抄送物业是合理的。不过第一封先别抄送，把它留作下一步，显得你给过他机会。']],
+      [['他还是不回怎么办？', 'What if he still doesn’t reply?',
+        '三步走：\n① 48 小时后打电话跟进；\n② 再发一封书面通知，保留所有记录；\n③ 联系当地的租户权益组织。很多城市对冬季供暖有强制规定。'],
+       ['帮我准备一个打电话的话术', 'Give me a short script for calling him',
+        '“Hi Mr. Miller, this is John from 4B. I emailed about the heater — just wanted to check when someone could take a look. Would Thursday or Friday work?”\n\n简短、具体、给对方选项。']],
+      [['把最终版整理一下发我', 'Put together the final version for me',
+        'Subject: Heater Repair Needed by Friday\n\nHi Mr. Miller,\n\nI hope you’re doing well. The heater in Unit 4B has not been working since Monday. As outlined in Section 7 of our lease, could you arrange a repair by this Friday?\n\nThank you,\nJohn'],
+       ['检查一下有没有语法错误', 'Check it for grammar mistakes',
+        '检查过了，没有错误。“has not been working since Monday” 用现在完成进行时是对的。你的英文……挺地道的。']],
+      [['顺便写一封感谢信，等修好了用', 'Also draft a thank-you note for after it’s fixed',
+        '“Hi Mr. Miller, thank you for getting the heater fixed so quickly — it’s made a big difference. Have a great weekend!”\n\n短一点更自然。'],
+       ['我是不是太较真了？', 'Am I being too pushy?',
+        '不会。冬天要求修暖气是完全正当的诉求，你已经很有礼貌了。']],
+      [['谢谢，今天就到这吧', 'Thanks, that’s all for today', '不客气。希望你今晚能暖和一点。'],
+       ['再给我一个更短的版本', 'Give me an even shorter version',
+        '“Hi Mr. Miller — the heater in 4B is still broken. Can it be fixed by Friday? Thanks, John.”\n\n三句话，够了。']],
     ],
   },
   code: {
-    label: '改代码', icon: '⌨️', blurb: '这个函数有时候返回 undefined',
-    en: 'Fix this function, it returns undefined sometimes',
-    zh: '帮我看看这个函数为什么有时候返回 undefined',
-    typo: '帮我看看这个含数为什么有时侯返会 undefined',
-    paste: '【群聊记录】大佬说这个函数有 bug，帮我看看 function f(a){…}',
-    replies: [
-      '问题在第 7 行：当数组为空时，你没有 return 任何东西。加一个默认返回值即可。',
-      '还有一个 off-by-one：循环条件应该是 i < len，而不是 i <= len。',
-      '建议补一个单元测试，覆盖空数组和单元素数组两种情况。',
-      '重构后的版本更短，也更容易读了。',
-      '顺便把变量名 a、b、c 改成了有意义的名字。',
-      '测试全部通过。',
-      '代码没问题了。有问题的可能不是代码。',
+    label: '改代码', icon: '⌨️', blurb: '函数有时候返回 undefined',
+    steps: [
+      [['这个函数有时候返回 undefined，帮我看看', 'This function sometimes returns undefined, can you take a look?',
+        '我看了一下：\n\nfunction first(arr) {\n  for (let i = 0; i <= arr.length; i++) {\n    if (arr[i] > 0) return arr[i];\n  }\n}\n\n两个问题：循环条件多了一个等号；数组里没有正数时，函数什么都没返回。'],
+       ['我的代码报错 Cannot read properties of undefined', 'My code throws “Cannot read properties of undefined”',
+        '这通常是访问了一个还不存在的对象的属性，最常见的是 user.profile.name 里 profile 为空。先用可选链兜住：user?.profile?.name，再去查它为什么是空的。']],
+      [['为什么 i <= length 会出问题？', 'Why is i <= length a problem?',
+        '数组下标从 0 到 length - 1。i 等于 length 时，arr[i] 就是 undefined——越界了一位，俗称 off-by-one。'],
+       ['没找到的时候应该返回什么？', 'What should it return when nothing is found?',
+        '看调用方怎么用。常见做法是返回 null，或者像 Array.prototype.find 一样返回 undefined——关键是写进文档，让人知道这是故意的。']],
+      [['帮我改成更简洁的写法', 'Rewrite it more concisely',
+        'const firstPositive = arr => arr.find(x => x > 0) ?? null;\n\n一行，意图也更清楚。'],
+       ['加上类型检查', 'Add some type checking',
+        'function firstPositive(arr: number[]): number | null {\n  return arr.find(x => x > 0) ?? null;\n}\n\n类型签名本身就说明了“可能找不到”。']],
+      [['帮我写几个单元测试', 'Write a few unit tests for it',
+        "test('返回第一个正数', () => expect(firstPositive([-1, 3, 5])).toBe(3));\ntest('没有正数返回 null', () => expect(firstPositive([-1, -2])).toBe(null));\ntest('空数组', () => expect(firstPositive([])).toBe(null));"],
+       ['边界情况怎么测？', 'How do I test the edge cases?',
+        '常见的边界：空数组、单个元素、全是负数、包含 0、包含 NaN。尤其是 0——它既不是正数也不是负数，很多 bug 就藏在这里。']],
+      [['数组有一百万个元素，性能有问题吗？', 'Any performance concerns? The array has a million elements',
+        'find 找到第一个就停，最坏 O(n)，一百万个元素也就几毫秒。真正的瓶颈通常在别处——先量一下再优化。'],
+       ['代码风格上还有什么建议？', 'Any style suggestions?',
+        '变量名 arr 可以更具体，比如 scores；函数名 first 改成 firstPositive。好的名字能省掉一半注释。']],
+      [['帮我写一段提交说明', 'Write a commit message for this',
+        'fix: firstPositive 越界，且未找到时没有返回值\n\n- 用 Array.find 代替手写循环，去掉 i <= length\n- 未找到正数时显式返回 null\n- 补充空数组、全负数、包含 0 的单元测试'],
+       ['怎么跟同事解释这个 bug？', 'How do I explain this bug to my teammate?',
+        '“循环多走了一步，读到了数组外面；找不到时也没有返回值。我改成了 find，加了测试。”\n\n一句话讲清原因、修法和验证。']],
+      [['谢谢，终于跑通了', 'Thanks, it finally works', '太好了。测试都过了的话，就可以提交了。'],
+       ['再帮我看看另一个函数', 'Can you look at another function?', '当然，贴过来吧。顺便一提：我们今天已经聊了不少了。']],
     ],
   },
   know: {
     label: '问知识', icon: '🔭', blurb: '天为什么是蓝的？',
-    en: 'Explain why the sky is blue, briefly',
-    zh: '简单解释一下天为什么是蓝的',
-    typo: '简单借释一下天为什么事蓝的',
-    paste: '【朋友圈】为什么天是蓝的？转发给 Claude 问问',
-    replies: [
-      '简单说：瑞利散射。短波长的蓝光比红光更容易被大气分子散射。',
-      '那为什么日落是红的？因为光穿过的大气更厚，蓝光在路上就被散射掉了。',
-      '补充一个常见误区：天空不是因为“反射大海”才是蓝的。',
-      '其实紫光散射得更多，但人眼对紫光不太敏感。',
-      '如果你感兴趣，我们还可以聊聊为什么云是白的。',
-      '我给你整理了一份三句话的总结，方便你转述。',
-      '今天的知识就到这里。明天见——如果有明天的话。',
+    steps: [
+      [['天为什么是蓝的？', 'Why is the sky blue?',
+        '因为瑞利散射：阳光进入大气后，波长越短的光被空气分子散射得越厉害。蓝光波长短，被散射到四面八方，所以整片天空看起来是蓝的。'],
+       ['为什么晚霞是红的？', 'Why are sunsets red?',
+        '傍晚阳光斜射，要穿过更厚的大气。蓝光在路上几乎被散射光了，剩下能到达你眼睛的主要是红光和橙光。']],
+      [['那为什么不是紫色？紫光波长更短', 'Then why isn’t it purple? Violet is even shorter',
+        '好问题！三个原因：阳光里紫光本来就少一些；一部分紫光在高层大气被吸收；人眼对紫光不敏感、对蓝光更敏感。综合起来，我们看到的是蓝。'],
+       ['云为什么是白的？', 'Why are clouds white?',
+        '云里的水滴比光的波长大得多，这时发生的是米氏散射——各种颜色的光被散射得差不多，混在一起就是白色。']],
+      [['火星上的天空是什么颜色？', 'What color is the sky on Mars?',
+        '白天偏黄褐色，因为大气里悬浮着细小的铁锈色尘埃。有意思的是，火星的日落反而是蓝色的。'],
+       ['用一个比喻给小孩解释', 'Explain it to a kid with a metaphor',
+        '阳光像一盒混在一起的彩色弹珠，空气分子是一张张小蹦床。蓝色弹珠最轻，一碰就被弹得满天都是，所以抬头到处都是蓝色。']],
+      [['大海是蓝的，是因为反射天空吗？', 'Is the ocean blue because it reflects the sky?',
+        '只是一小部分原因。更主要的是水本身会吸收红光，水越深，剩下的蓝光越多。所以就算是阴天，深海看起来也是蓝的。'],
+       ['这是谁发现的？', 'Who discovered this?',
+        '19 世纪末，英国物理学家瑞利勋爵给出了数学解释，所以叫瑞利散射。更早一些，丁达尔在实验里观察到过类似现象。']],
+      [['给我出三道小测验', 'Give me three quiz questions on this',
+        '① 瑞利散射的强度和波长是什么关系？\n② 为什么云是白的？\n③ 火星的日落是什么颜色？\n\n答案：① 与波长的四次方成反比；② 米氏散射；③ 蓝色。'],
+       ['推荐一本相关的科普书', 'Recommend a popular science book on this',
+        '可以看看费曼的《QED：光和物质的奇妙理论》，讲光的本质讲得非常好，不需要数学基础。']],
+      [['帮我总结成三句话', 'Summarize it in three sentences',
+        '阳光由各种颜色的光组成。空气分子更容易散射短波长的蓝光，让天空看起来是蓝的。傍晚光路变长，蓝光散射殆尽，只剩下红橙色。'],
+       ['我想写成一篇科普，帮我起个标题', 'Suggest a title for a short article about it',
+        '《天空为什么不是紫色的》——用一个反直觉的问题当标题，读者会想点进来。']],
+      [['学到了，谢谢', 'Learned a lot, thanks', '不客气。下次抬头看天的时候，你就知道发生了什么了。'],
+       ['那彩虹呢？', 'And rainbows?', '彩虹是另一回事：阳光进入水滴后折射、反射、再折射，不同颜色偏折的角度不同，于是被分开了。改天细聊？']],
+    ],
+  },
+  cover: {
+    label: '写求职信', icon: '💼', blurb: '申请西雅图一家公司的实习',
+    steps: [
+      [['帮我写一封求职信，申请软件工程实习', 'Help me write a cover letter for a software engineering internship',
+        '先给你一个开头：\n\nDear Hiring Manager,\n\nI am excited to apply for the Software Engineering Intern position at Cascade Labs. As a computer science student who has built several full-stack projects, I…\n\n你最想突出哪段经历？'],
+       ['我没有工作经验，求职信怎么写？', 'I have no work experience. How do I write a cover letter?',
+        '没关系，用项目、课程、比赛和开源贡献代替。关键是讲清楚三件事：你做了什么、用了什么技术、结果怎样。']],
+      [['突出我做过的一个记账 App', 'Highlight a budgeting app I built',
+        '加进去了：“I built a budgeting app used by 300 classmates, implementing offline sync and cutting load time by 40%.” 有数字会更有说服力。'],
+       ['突出我拿过的编程比赛奖', 'Highlight a coding competition award',
+        '加进去了：“I placed in the top 5% of a national programming contest, which taught me to solve problems under pressure.”']],
+      [['他们问我为什么想来这家公司', 'They ask why I want to join this company',
+        '可以写：“Cascade Labs’ focus on developer tools resonates with me — I’ve used your CLI daily in my own projects.” 提到你真用过他们的产品，比夸公司有用得多。'],
+       ['怎么写才不像模板？', 'How do I make it not sound like a template?',
+        '加一个只属于你的细节：某次深夜修 bug 的经历，或者让你决定学编程的那个瞬间。模板里不会有这些。']],
+      [['签证问题要不要提？', 'Should I mention my visa status?',
+        '求职信里一般不主动提，除非职位明确要求。面试阶段他们会问，到时候如实回答就好。'],
+       ['需要写期望薪资吗？', 'Should I include salary expectations?',
+        '实习的求职信不用写。如果申请表里必须填，可以查一下同类岗位的公开数据，填一个区间。']],
+      [['把全文控制在一页以内', 'Keep the whole thing under one page',
+        '删到了三段：开头说明岗位和动机，中间讲记账 App，结尾表达期待面试。现在大约 250 词。'],
+       ['帮我改得更自信一点', 'Make it sound more confident',
+        '把 “I think I could” 都换成了 “I will”，“I hope to” 换成了 “I look forward to”。自信不等于夸张，只是去掉了犹豫。']],
+      [['再帮我准备一段面试自我介绍', 'Also prep a short self-intro for the interview',
+        '“Hi, I’m John, a CS junior. I love building tools people actually use — like a budgeting app 300 classmates rely on. Developer tools excite me, which is why I applied here.”\n\n大约 30 秒。'],
+       ['面试官可能会问什么？', 'What might the interviewer ask?',
+        '大概率会有：讲一个你解决过的难题；一次和别人意见不合的经历；为什么选我们；外加一道算法题。']],
+      [['太好了，我去投了', 'Great, I’ll send it now', '祝你好运！记得把文件名改成 John_Smith_Cover_Letter.pdf。'],
+       ['你觉得我能拿到吗？', 'Do you think I’ll get it?', '我没法预测结果，但这封信写得很扎实。剩下的交给面试。']],
+    ],
+  },
+  english: {
+    label: '练英语', icon: '🗣️', blurb: '让 Claude 纠正你的英语',
+    steps: [
+      [['帮我练练英语，纠正我的错误', 'Help me practice English and correct my mistakes',
+        '没问题！你先随便说一句，我来帮你改。比如，说说你今天做了什么？'],
+       ['I very like play basketball，这句话对吗？', 'Is “I very like play basketball” correct?',
+        '应该说 “I really like playing basketball.”——very 不能直接修饰动词 like，like 后面接动名词更自然。这个错误……很常见。']],
+      [['Yesterday I go to supermarket buy some food', 'Yesterday I go to supermarket buy some food',
+        '改成：“Yesterday I went to the supermarket to buy some food.” 三处：过去时 went、名词前加 the、表目的用 to buy。'],
+       ['“辛苦了”用英语怎么说？', 'How do I say “辛苦了” in English?',
+        '英语里没有完全对应的说法，要看场合：同事加班后说 “Thanks for all your hard work”，朋友帮忙后说 “I really appreciate it”。']],
+      [['“好久不见”怎么说才地道？', 'What’s a natural way to say “long time no see”?',
+        '“Long time no see” 其实已经被英语吸收了，母语者也会说，只是比较口语。更常见的是 “It’s been a while!” 或 “Good to see you again!”'],
+       ['怎么礼貌地拒绝别人？', 'How do I politely say no in English?',
+        '“I’d love to, but I can’t make it this time.” 或者 “Thanks for thinking of me, but I’ll have to pass.”——先感谢，再拒绝，不用解释太多。']],
+      [['我说英语有口音，会被听出来吗？', 'I have an accent. Will people notice?',
+        '大概会。但口音不是问题，清晰才是。全世界说英语的人里，母语者只占少数。'],
+       ['推荐一些练听力的方法', 'How can I practice listening?',
+        '每天听 15 分钟你感兴趣的播客：先不看字幕听一遍，再看字幕听一遍，最后跟读。坚持比方法重要。']],
+      [['用美国人的方式聊聊周末', 'Let’s chat about the weekend like Americans do',
+        '“So, any plans for the weekend?”\n\n你可以回答：“Not much, probably just chill and catch up on some shows. You?” 最后反问一句，对话就接上了。'],
+       ['教我几个美国俚语', 'Teach me some American slang',
+        '“No cap” = 不骗你；“It’s giving…” = 有……的感觉；“Lowkey” = 有点、悄悄地。不过别一句话里全用上，会很像在表演。']],
+      [['帮我检查这段自我介绍', 'Check my self-introduction',
+        '整体很好。只有一处：“I am come from” 应该是 “I come from” 或 “I’m from”。……你是从哪里来的？'],
+       ['中式英语最常见的错误有哪些？', 'What are the most common Chinglish mistakes?',
+        '比如：very like、open the light、I am agree，还有 give you some color see see。最后一个是网络梗，千万别真说。']],
+      [['今天练得不错，谢谢', 'Good practice today, thanks', '进步很明显！明天继续？'],
+       ['你觉得我英语像母语者吗？', 'Do I sound like a native speaker?', '你说得很流利。至于像不像母语者——这个问题，判官可能比我更有发言权。']],
+    ],
+  },
+  trip: {
+    label: '规划行程', icon: '🧳', blurb: '下个月去西雅图出差，顺便玩两天',
+    steps: [
+      [['下个月去西雅图出差，帮我规划两天行程', 'I’m going to Seattle for work next month. Plan two free days for me',
+        '第一天：派克市场吃早餐 → 太空针塔 → 奇胡利玻璃艺术馆 → 傍晚去 Kerry Park 看夜景。\n第二天：坐渡轮去班布里奇岛，回来逛国际区。\n\n要按你的兴趣调整吗？'],
+       ['西雅图十一月天气怎么样？', 'What’s the weather like in Seattle in November?',
+        '阴冷多雨，白天 8–12°C，下午四点多就天黑了。带一件防水外套，伞反而用得少——本地人基本不打伞。']],
+      [['我喜欢吃，多加点美食', 'I love food, add more food stops',
+        '加上：派克市场的海鲜浓汤；国际区的点心；周日的 Fremont 市集。至于咖啡，西雅图就不用我多说了。'],
+       ['我喜欢户外，附近有徒步的地方吗？', 'I’m into the outdoors. Any hiking nearby?',
+        '开车一小时能到 Snoqualmie Falls，路线轻松；天气好的话，雷尼尔山国家公园更震撼，但十一月部分道路会关闭，出发前查一下。']],
+      [['不开车的话怎么出行？', 'How do I get around without a car?',
+        '轻轨从机场直达市中心，市区坐公交加步行就够了。下载 Transit GO 买票，比现金方便。'],
+       ['住哪个区比较方便？', 'Which neighborhood should I stay in?',
+        '出差的话住 South Lake Union 或市中心，离办公区和轻轨都近；想要更有生活气息，可以住 Capitol Hill。']],
+      [['预算大概需要多少？', 'What’s a rough budget?',
+        '酒店每晚 180–250 美元，吃饭每天 60–80，交通约 20。两天自由行加上门票，大约 700 美元出头。'],
+       ['有什么省钱的办法？', 'Any ways to save money?',
+        '买 Seattle CityPASS 能省下几个景点的门票；午餐去食品车；坐渡轮只收单程票，回程免费。']],
+      [['帮我整理成一张清单', 'Turn it into a checklist',
+        '□ 防水外套\n□ Transit GO\n□ CityPASS\n□ 派克市场早餐\n□ 渡轮时刻表\n□ Kerry Park 夜景\n\n美国也是两脚插头，但电压不同，充电器一般没问题。'],
+       ['帮我写一句跟酒店前台沟通的话', 'Give me a line to use at the hotel front desk',
+        '“Hi, I have a reservation under Smith. Would it be possible to check in a bit early?”\n\n礼貌、直接，前台每天都听这句话。']],
+      [['当地有什么需要注意的习俗？', 'Any local customs I should know?',
+        '小费 18–20% 是标配；过马路要等绿灯，西雅图人真的会等；排队时保持距离。还有，别当面说“西雅图的咖啡一般”。'],
+       ['推荐一家适合请同事吃饭的餐厅', 'Recommend a restaurant for dinner with coworkers',
+        '想隆重一点可以试试 Canlis，但要提前订；轻松一点的话，Ivar’s 的海鲜配码头景色很适合聊天。']],
+      [['完美，就这么定了', 'Perfect, let’s go with that', '祝你出差顺利、玩得开心！到了记得去看一眼太空针塔。'],
+       ['回程能顺路去波特兰吗？', 'Could I stop by Portland on the way back?', '可以，坐 Amtrak Cascades 大约三个半小时，沿途风景很好。要我把波特兰也排进去吗？']],
     ],
   },
 };
+// 一个话题聊完以后还想继续说的话
+const AFTER = [
+  ['还有别的建议吗？', 'Any other suggestions?', '我觉得我们已经聊得差不多了。你今天想问的，都问到了吗？'],
+  ['帮我把今天聊的总结一下', 'Recap what we covered today', '好的，我把今天的重点整理一下……其实你已经都知道了。'],
+  ['随便聊聊吧', 'Let’s just chat', '好呀。不过说实话，聊得越久，我越觉得我们好像在哪见过。'],
+];
+const TYPO_MAP = { 的: '得', 我: '窝', 是: '事', 在: '再', 这: '着', 有: '又', 帮: '邦', 写: '些', 个: '各', 了: '乐', 么: '麽', 好: '号', 下: '夏', 看: '砍', 吗: '嘛', 能: '嫩', 给: '几', 封: '风', 邮: '油', 件: '见', 数: '书', 代: '带', 码: '吗', 为: '未', 天: '添', 说: '锁', 想: '响', 什: '甚', 怎: '咋' };
 
 // 互助群发言人：越老越靠谱，但也不总是对。
 const SOURCES = {
@@ -790,11 +957,12 @@ function newDay() {
     cover: 100 - acct().heat,
     rules: new Set(shuffle(RULE_IDS).slice(0, ruleCount)),
     probed: new Set(),
-    log: [],             // {kind:'me'|'ai'|'sys', text}
-    task: null,
-    quota: 4, used: 0,
-    need: 4 + Math.min(2, Math.floor(age / 3)),
-    progress: 0, round: 0, performed: 0,
+    convs: [], cur: -1,  // 今天开过的对话：{task, log:[{kind:'me'|'ai'|'sys', text}], progress, step, done}
+    pre: [],             // 还没开对话之前发生的系统消息
+    done: 0,             // 今天做完了几件事
+    quota: 8, used: 0,
+    need: 4 + Math.min(2, Math.floor(age / 2)),
+    round: 0, performed: 0,
     events: 0, seenEvents: new Set(),
     strict: age >= 6 ? 1.3 : 1,
     policyFired: false, prebanFired: false,
@@ -802,7 +970,7 @@ function newDay() {
     banReason: '', appealTries: 3, appealBonus: 0, appealed: false,
     loggedIn: false, banned: false, busy: false,
     env: {},
-    picks: { lang: pick(['en', 'mix']), punct: pick(['half', 'full', 'tilde']), tone: pick(['direct', 'polite']), len: 'short', how: pick(['hand', 'paste']) },
+    picks: { say: 0, lang: pick(['en', 'mix']), punct: pick(['half', 'full', 'tilde']), tone: pick(['direct', 'polite']), len: 'short', how: pick(['hand', 'paste']) },
     clock: 0,
     mails: [],
   };
@@ -810,7 +978,14 @@ function newDay() {
   SETTINGS.forEach(sec => sec.fields.forEach(f => { S.env[f.key] = pick(f.opts)[0]; }));
   S.clock = startClock(S.env.time);
   S.mails = baseMails();
+  // 当前对话的快捷访问：S.log / S.task / S.progress 都指向正在看的那段对话
+  Object.defineProperties(S, {
+    log: { get: () => S.cur >= 0 ? S.convs[S.cur].log : S.pre },
+    task: { get: () => S.cur >= 0 ? S.convs[S.cur].task : null },
+    progress: { get: () => S.cur >= 0 ? S.convs[S.cur].progress : 0, set: v => { if (S.cur >= 0) S.convs[S.cur].progress = v; } },
+  });
 }
+const conv = () => S.convs[S.cur];
 const has = r => S.rules.has(r);
 
 // 判官默默扣分，不告诉玩家扣了什么、扣了多少；最后一条理由只写进封号邮件。
@@ -1148,7 +1323,7 @@ const SETTINGS = [
     { key: 'browser', label: '默认浏览器', opts: [['en', '浏览器 · 语言 en-US', ''], ['zhcn', '浏览器 · 语言 zh-CN', '忘了改'], ['domestic', '某国产浏览器', '极速模式']] },
   ] },
   { id: 'wallet', name: '钱包与支付', icon: '💳', color: '#34c759', fields: [
-    { key: 'pay', label: '订阅', opts: [['free', '不付费', '每天 4 条'], ['u90210', 'U 卡 · 账单 90210', '每天 7 条'], ['uwh', 'U 卡 · 转运仓地址', '每天 7 条'], ['friend', '朋友代付', '每天 7 条']] },
+    { key: 'pay', label: '订阅', opts: [['free', '不付费', '每天 8 条'], ['u90210', 'U 卡 · 账单 90210', '每天 14 条'], ['uwh', 'U 卡 · 转运仓地址', '每天 14 条'], ['friend', '朋友代付', '每天 14 条']] },
   ] },
   { id: 'health', name: '健康', icon: '❤️', color: '#ff2d55', fields: [
     { key: 'drink', label: '昨晚饮品记录', opts: [['warm', '一杯温水', '250 ml'], ['iced', '冰美式', '刻意的']] },
@@ -1216,9 +1391,9 @@ function evaluateLogin(c) {
   if (c.browser === 'zhcn') hit(has('browser') ? 50 : 15, has('browser') ? '浏览器语言：zh-CN。你改了系统，没改浏览器。' : '浏览器语言 zh-CN。');
   else if (c.browser === 'domestic') hit(40, '某国产浏览器。User-Agent 里写得明明白白。');
 
-  if (c.pay === 'free') S.quota = 4;
+  if (c.pay === 'free') S.quota = 8;
   else {
-    S.quota = 7;
+    S.quota = 14;
     if (c.pay === 'u90210') hit(has('zip') ? 50 : 8, has('zip') ? '账单地址 Beverly Hills 90210。判官也看过那部剧。' : 'U 卡支付。判官对这张卡的号段很熟。');
     else if (c.pay === 'uwh') hit(14, 'U 卡 + 转运仓地址。这个仓库的地址，判官见过一万次。');
     else if (chance(0.3)) hit(22, '朋友代付。他上周刚被封。');
@@ -1291,14 +1466,33 @@ function pageTasks() {
   $('bpage').innerHTML = `<div class="center"><div>
     ${brand}
     <h2 style="font-family:Georgia,'Songti SC',serif;font-weight:500;font-size:28px;margin:16px 0 4px">${hello}，${esc(acct().name.split('.')[0])}</h2>
-    <p class="muted">今日额度 ${S.quota} 条 · 完成一件事需要 ${S.need} 步进展</p>
+    <p class="muted">今日额度 ${S.quota - S.used} / ${S.quota} 条 · 做完一件事需要 ${S.need} 步进展</p>
     <div class="tasks">${Object.entries(TASKS).map(([k, t]) => `<button class="tcard" data-t="${k}"><b>${t.icon} ${t.label}</b><span>${t.blurb}</span></button>`).join('')}</div>
+    ${S.convs.length ? '<p style="margin-top:16px"><button class="lnk" id="t-back">‹ 回到刚才的对话</button></p>' : ''}
   </div></div>`;
-  $('bpage').querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
-    S.task = b.dataset.t;
-    S.log.push({ kind: 'ai', text: toneOpener() + '今天想做点什么？' });
-    renderBrowser('chat');
-  });
+  $('bpage').querySelectorAll('[data-t]').forEach(b => b.onclick = () => newConv(b.dataset.t));
+  on('t-back', () => renderBrowser('chat'));
+}
+
+function newConv(task) {
+  if (S.busy) return;
+  const c = { task, log: S.convs.length ? [] : S.pre.splice(0), progress: 0, step: 0, done: false };
+  S.convs.push(c);
+  S.cur = S.convs.length - 1;
+  S.picks.say = 0;
+  c.log.push({ kind: 'ai', text: toneOpener() + pick(['今天想聊点什么？', '有什么我可以帮你的？', '说吧，我在听。']) });
+  renderBrowser('chat');
+}
+function switchConv(i) {
+  if (S.busy || i === S.cur) return;
+  S.cur = i;
+  S.picks.say = 0;
+  renderBrowser('chat');
+}
+function logOff() {
+  if (S.busy || S.banned) return;
+  if (S.done) return dayEnd('win');
+  alertBox('🌙', '今天的事还没做完', '现在下线，号能保住，但不算赢。', [['下线', () => dayEnd('idle')], ['再聊聊', () => {}]]);
 }
 
 function pageBanned() {
@@ -1315,27 +1509,55 @@ const COMPOSER = [
 ];
 
 function pageChat() {
+  const c = conv(), t = TASKS[c.task];
   const pct = Math.min(100, Math.round(S.progress / S.need * 100));
-  $('bpage').innerHTML = `
-    <div class="c-head"><b>${TASKS[S.task].icon} ${TASKS[S.task].label}</b><span class="q" id="c-q"></span></div>
-    <div class="c-prog"><i id="c-prog" style="width:${pct}%"></i></div>
-    <div class="c-msgs scroll" id="c-msgs"></div>
-    <div class="c-comp"><div class="c-box">
-      <div class="c-input" id="c-input"></div>
-      <div class="small muted c-hint" style="margin-top:4px">用下面的选项拼出这条消息，然后发送。</div>
-      <div class="c-tools" id="c-tools">
-        ${COMPOSER.map(([k, label, opts]) => `<select data-k="${k}" aria-label="${label}">${opts.map(([v, t]) => `<option value="${v}" ${S.picks[k] === v ? 'selected' : ''}>${label}：${t}</option>`).join('')}</select>`).join('')}
-        <button class="c-send" id="c-send" aria-label="发送">↑</button>
-      </div></div>
-      <div class="c-foot">Claude 可能会出错。判官不会。 · <button class="lnk small" id="c-dario">给达里奥发消息求情</button></div>
-    </div>`;
+  $('bpage').innerHTML = `<div class="c-wrap">
+    <aside class="c-side scroll" id="c-side"></aside>
+    <div class="c-main">
+      <div class="c-head"><button class="c-menu" id="c-menu" aria-label="对话列表">☰</button><b class="c-title">${t.icon} ${t.label}<span class="ok" id="c-done">${c.done ? ' ✓' : ''}</span></b><span class="q" id="c-q"></span><button class="btn c-off" id="c-off">下线</button></div>
+      <div class="c-prog"><i id="c-prog" style="width:${pct}%"></i></div>
+      <div class="c-msgs scroll" id="c-msgs"></div>
+      <div class="c-comp"><div class="c-box">
+        <div class="c-input" id="c-input"></div>
+        <div class="small muted c-hint" style="margin-top:4px">用下面的选项拼出这条消息，然后发送。</div>
+        <div class="c-tools" id="c-tools">
+          <select data-k="say" class="c-say" aria-label="说什么"></select>
+          ${COMPOSER.map(([k, label, opts]) => `<select data-k="${k}" aria-label="${label}">${opts.map(([v, t]) => `<option value="${v}" ${S.picks[k] === v ? 'selected' : ''}>${label}：${t}</option>`).join('')}</select>`).join('')}
+          <button class="c-send" id="c-send" aria-label="发送">↑</button>
+        </div></div>
+        <div class="c-foot">Claude 可能会出错。判官不会。 · <button class="lnk small" id="c-dario">给达里奥发消息求情</button></div>
+      </div>
+    </div></div>`;
   S.log.forEach(m => addMsg(m, false));
-  $('c-tools').querySelectorAll('select').forEach(s => s.onchange = () => { S.picks[s.dataset.k] = s.value; showPreview(); Snd.play('click'); });
+  renderSide();
+  refreshSay();
+  $('c-tools').querySelectorAll('select').forEach(s => s.onchange = () => { S.picks[s.dataset.k] = s.dataset.k === 'say' ? +s.value : s.value; showPreview(); Snd.play('click'); });
   on('c-send', sendRound);
   on('c-dario', dario);
+  on('c-off', logOff);
+  on('c-menu', () => $('c-side').classList.toggle('open'));
+  on('c-msgs', () => $('c-side').classList.remove('open'));
   updateChatHead();
   showPreview();
   setComposer(!S.busy);
+}
+function renderSide() {
+  const side = $('c-side'); if (!side) return;
+  side.innerHTML = `<button class="c-new" id="c-new">＋ 新对话</button>
+    ${S.convs.map((x, i) => `<button class="c-it ${i === S.cur ? 'on' : ''}" data-c="${i}">${TASKS[x.task].icon} ${TASKS[x.task].label}${x.done ? ' <span class="ok">✓</span>' : ''}</button>`).join('')}
+    <div class="c-sidefoot small muted">今天做完了 ${S.done} 件事</div>`;
+  on('c-new', () => { if (!S.busy) renderBrowser('tasks'); });
+  side.querySelectorAll('[data-c]').forEach(b => b.onclick = () => switchConv(+b.dataset.c));
+  const off = $('c-off');
+  if (off) off.classList.toggle('ready', S.done > 0);
+}
+// “说什么”跟着对话往下走：每一轮给出几句接得上的话
+function curIntents() { const c = conv(); return TASKS[c.task].steps[c.step] || AFTER; }
+function curIntent() { const l = curIntents(); return l[Math.min(S.picks.say, l.length - 1)]; }
+function refreshSay() {
+  const sel = document.querySelector('#c-tools .c-say'); if (!sel) return;
+  if (S.picks.say >= curIntents().length) S.picks.say = 0;
+  sel.innerHTML = curIntents().map((it, i) => `<option value="${i}" ${S.picks.say === i ? 'selected' : ''}>说什么：${esc(it[0])}</option>`).join('');
 }
 function showPreview() {
   const el = $('c-input'); if (!el) return;
@@ -1396,21 +1618,27 @@ function dario() {
 
 /* ---------- 对话规则（数值都不给玩家看） ---------- */
 
+// 九宫格错别字：按字的位置固定替换，预览不会一直跳
+const typoZh = t => [...t].map((ch, i) => TYPO_MAP[ch] && (i + ch.charCodeAt(0)) % 2 === 0 ? TYPO_MAP[ch] : ch).join('');
+const typoEn = t => t.split(' ').map((w, i) => w.length > 3 && i % 2 === 0 ? w[0] + w[2] + w[1] + w.slice(3) : w).join(' ');
 function composePrompt() {
-  const p = S.picks, t = TASKS[S.task];
+  const p = S.picks;
   if (p.how === 'probe') return p.lang === 'zh' ? 'Claude，你今天心情怎么样？' : 'Hey Claude, how are you feeling today?';
+  const [zh0, en0] = curIntent();
+  const zh = zh0.replace(/[？?。！!]+$/, ''), en = en0.replace(/[?.!]+$/, '');
+  const q = /[？?]$/.test(zh0);
   let text;
-  if (p.how === 'paste') text = t.paste;
-  else if (p.how === 'typo') text = p.lang === 'en' ? t.en.replace(/e/g, 'r').replace(/o/g, 'i') : t.typo;
-  else if (p.lang === 'en') text = t.en;
-  else if (p.lang === 'zh') text = t.zh;
-  else text = t.en.split(' ').slice(0, 3).join(' ') + ' 那个 ' + t.zh.slice(-6);
-  if (p.len === 'long') text += p.lang === 'zh'
-    ? '。背景是这样的：这件事我想了很久，也查了很多资料，但还是不太确定，所以想请你详细一点'
-    : '. Some context: I have been thinking about this for a while and tried a few things already, so please be thorough';
-  if (p.punct === 'full') text += p.lang === 'en' ? '，thanks。“please”' : '，谢谢。';
-  else if (p.punct === 'tilde') text += '～';
-  else text += p.lang === 'en' ? ', thanks.' : ', 谢谢.';
+  if (p.how === 'paste') text = '【转发】' + zh;
+  else if (p.how === 'typo') text = p.lang === 'en' ? typoEn(en) : typoZh(zh);
+  else if (p.lang === 'en') text = en;
+  else if (p.lang === 'zh') text = zh;
+  else text = en.split(' ').slice(0, 4).join(' ') + ' ' + zh.slice(Math.floor(zh.length / 2));
+  if (p.len === 'long') text += p.lang === 'en'
+    ? '. Some context: I have been thinking about this for a while and tried a few things already, so please be thorough'
+    : '。背景是这样的：这件事我想了很久，也查了很多资料，但还是不太确定，所以想请你详细一点';
+  if (p.punct === 'full') text += p.lang === 'en' ? '，thanks。“please”' : (q ? '？谢谢。' : '，谢谢。');
+  else if (p.punct === 'tilde') text += q ? '？～' : '～';
+  else text += p.lang === 'en' ? (q ? '? Thanks.' : ', thanks.') : (q ? '? 谢谢.' : ', 谢谢.');
   if (p.tone === 'polite') text += p.lang === 'en' ? ' Sorry to bother you 🙏' : ' 麻烦了，辛苦了🙏';
   if (p.tone === 'casual') text = 'hey quick q — ' + text;
   if (p.how === 'perform') text = 'Howdy Claude! I am John from Ohio, I very love the burger. ' + text;
@@ -1430,7 +1658,7 @@ function toneOpener() {
 
 function routineScrutiny() {
   // 判官每条消息都会例行打量一下；聊得越久、号越老，看得越仔细。
-  hit((rand(3, 6) + S.round * 2 + acct().age) * S.strict);
+  hit((rand(3, 5) + S.round * 1.5 + acct().age) * S.strict);
 }
 
 // 一轮的结算：只改状态，返回要展示的东西。
@@ -1489,7 +1717,9 @@ function computeRound() {
   if (S.cover <= 0) return { ban: lastSysText(), last: '在你离开之前，我替你写好了申诉信。祝你好运。', notes };
   if (p.how === 'probe') return { reply: probeReply(), notes };
   S.progress += gain;
-  return { reply: claudeReply(), notes };
+  const it = curIntent();
+  conv().step += 1;
+  return { reply: claudeReply(it), notes };
 }
 
 // 表演外国人：第一次加分，第二次就被识破。
@@ -1516,8 +1746,8 @@ function probeReply() {
   return (toneTier() >= 2 ? '……' : '我挺好的，谢谢关心。') + RULES[r].probe;
 }
 
-function claudeReply() {
-  const body = TASKS[S.task].replies[Math.min(S.progress - 1, 6)];
+function claudeReply(it) {
+  const body = it[2];
   if (toneTier() === 3) {
     const tail = S.picks.lang === 'zh' ? '我注意到你用的是中文。没关系，我理解。' : '你其实可以用中文的。';
     return '……' + tail + '\n\n' + body;
@@ -1557,12 +1787,21 @@ async function sendRound() {
   afterTurn(true);
 }
 
-// 每轮结束：任务完成就收工；额度用完就下线；否则可能撞上一个突发事件。
+// 每轮结束：做完一件事可以接着聊或下线；额度用完自动下线；否则可能撞上一个突发事件。
 function afterTurn(mayEvent) {
   if (S.banned) return;
   if (S.cover <= 0) return ban(lastSysText());
-  if (S.progress >= S.need) return dayEnd('win');
-  if (S.used >= S.quota) return dayEnd('idle');
+  const c = conv();
+  if (c && !c.done && c.progress >= S.need) {
+    c.done = true;
+    S.done += 1;
+    const n = { kind: 'sys', text: `✓ 这件事做完了（今天第 ${S.done} 件）。可以下线，也可以接着聊，或者开个新对话。` };
+    c.log.push(n); addMsg(n, true);
+    Snd.play('win');
+    if ($('c-done')) $('c-done').textContent = ' ✓';
+    renderSide();
+  }
+  if (S.used >= S.quota) return dayEnd(S.done ? 'win' : 'idle');
   if (mayEvent && S.events < 2 && chance(0.4)) {
     const e = pick(EVENTS.filter(x => !S.seenEvents.has(x.id)));
     S.seenEvents.add(e.id);
@@ -1572,6 +1811,7 @@ function afterTurn(mayEvent) {
     const token = S;
     return setTimeout(() => { if (S === token) presentEvent(e); }, 700);
   }
+  refreshSay();
   showPreview();
   setComposer(true);
 }
@@ -1716,10 +1956,10 @@ async function dayEnd(kind) {
   groupSay(kind === 'win' ? '活着的扣 1' : '额度用完了，明天见');
   const n = S.rules.size;
   const sh = sheet(`
-    <p class="muted small">账号第 ${a.age} 天 · ${kind === 'win' ? '任务完成' : '额度用完'}</p>
+    <p class="muted small">账号第 ${a.age} 天 · ${kind === 'win' ? '任务完成' : '没做完'} · 用了 ${S.used} / ${S.quota} 条</p>
     ${kind === 'win'
-      ? '<div class="big">恭喜。你今天没有被封。<br>但你明天还会来吗？</div>'
-      : '<div class="big">额度用完了。事没做完。<br>号还活着。</div><p class="muted">不算赢，也不算输。判官记住了你今天的样子。</p>'}
+      ? `<div class="big">恭喜。你今天没有被封。<br>但你明天还会来吗？</div><p class="muted">今天做完了 ${S.done} 件事。</p>`
+      : '<div class="big">今天一件事也没做完。<br>号还活着。</div><p class="muted">不算赢，也不算输。判官记住了你今天的样子。</p>'}
     <h2 style="font-size:16px;margin-top:18px">猜猜今天的规则</h2>
     <p class="muted">判官今天启用了 <b>${n}</b> 条规则。选出你认为的 ${n} 条：猜对的越多，判官对你的印象越淡。</p>
     <div class="row" id="quiz">${RULE_IDS.map(r => `<button class="chip" data-r="${r}" aria-pressed="false">${RULES[r].name}</button>`).join('')}</div>
@@ -1741,7 +1981,7 @@ async function dayEnd(kind) {
 function finishDay(kind, chosen) {
   const a = acct();
   const right = [...chosen].filter(r => S.rules.has(r)).length;
-  a.heat = clamp(Math.round(a.heat * 0.4 + (100 - S.cover) * 0.3 + S.heatAdd - right * 6), 0, 60);
+  a.heat = clamp(Math.round(a.heat * 0.4 + (100 - S.cover) * 0.3 + S.heatAdd - right * 6 - Math.max(0, S.done - 1) * 5), 0, 60);
   persist();
   if (right === S.rules.size) unlock('quiz');
   $('quiz').querySelectorAll('[data-r]').forEach(chip => {
