@@ -55,6 +55,15 @@ public class MainActivity extends Activity {
         }
     }
 
+    // 返回键先交给游戏：有窗口就关窗口，没有可关的才退出。
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onBackPressed() {
+        webView.evaluateJavascript("window.__back ? window.__back() : false", result -> {
+            if (!"true".equals(result)) MainActivity.super.onBackPressed();
+        });
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);

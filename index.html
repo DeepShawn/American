@@ -51,7 +51,7 @@ body {
   -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
 }
 button, select, input, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
@@ -213,7 +213,7 @@ button { cursor: pointer; }
 .alert p { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 .alert .btns { display: flex; flex-direction: column; gap: 6px; }
 .alert .btns button { border: 0; border-radius: 8px; padding: 7px 10px; background: var(--chip); }
-.alert .btns button:first-child { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.alert .btns button:hover { background: var(--line); }
 .sheet { width: 560px; max-width: 100%; max-height: calc(100vh - 40px); overflow-y: auto; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; animation: winIn .2s ease-out; }
 .sheet h2 { margin: 0 0 6px; font-size: 20px; }
 .sheet .big { font-size: 20px; font-weight: 600; line-height: 1.5; margin: 4px 0 12px; }
@@ -917,7 +917,7 @@ function notify(app, title, body, onClick) {
   $('notifs').prepend(n);
   while ($('notifs').children.length > 3) $('notifs').lastChild.remove();
   Snd.play('notify');
-  setTimeout(kill, 4800);
+  setTimeout(kill, narrow() ? 2600 : 4800);
 }
 
 function alertBox(icon, title, text, buttons) {
@@ -984,7 +984,10 @@ function showLock() {
     </div></div>`;
   lk.classList.add('on');
   updateMenubar();
-  on('unlock', () => { Snd.play('click'); startDay(); });
+  on('unlock', () => {
+    if (!$('lock').classList.contains('on')) return;   // 回车和按钮可能同时触发
+    Snd.play('click'); startDay();
+  });
 }
 
 /* ======================================================================
@@ -1111,14 +1114,20 @@ function renderSettings() {
       ${sec.fields.map(f => `<div class="s-group"><div class="gl">${f.label}</div>${f.opts.map(([v, t, d]) =>
         `<button class="s-opt" data-k="${f.key}" data-v="${v}" aria-pressed="${S.env[f.key] === v}" ${S.loggedIn ? 'disabled' : ''}><span class="rad"></span><span class="t">${esc(t)}${d ? `<span class="d">${esc(d)}</span>` : ''}</span></button>`).join('')}</div>`).join('')}
     </div></div>`;
+  const side = $('b-settings').querySelector('.s-side');
+  side.scrollLeft = sideScroll;
+  side.onscroll = () => { sideScroll = side.scrollLeft; };
   $('b-settings').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { setTab = b.dataset.tab; renderSettings(); });
+  // 选项原地切换，不重绘，免得滚动位置跳回顶部
   $('b-settings').querySelectorAll('.s-opt').forEach(b => b.onclick = () => {
     S.env[b.dataset.k] = b.dataset.v;
     if (b.dataset.k === 'time') S.clock = startClock(b.dataset.v);
+    $('b-settings').querySelectorAll(`.s-opt[data-k="${b.dataset.k}"]`).forEach(x => x.setAttribute('aria-pressed', x === b));
     Snd.play('click');
-    renderSettings(); updateMenubar();
+    updateMenubar();
   });
 }
+let sideScroll = 0;
 
 function evaluateLogin(c) {
   const start = S.cover;
@@ -1258,6 +1267,7 @@ function pageChat() {
     <div class="c-msgs scroll" id="c-msgs"></div>
     <div class="c-comp"><div class="c-box">
       <div class="c-input" id="c-input"></div>
+      <div class="small muted" style="margin-top:4px">用下面的选项拼出这条消息，然后发送。</div>
       <div class="c-tools" id="c-tools">
         ${COMPOSER.map(([k, label, opts]) => `<select data-k="${k}" aria-label="${label}">${opts.map(([v, t]) => `<option value="${v}" ${S.picks[k] === v ? 'selected' : ''}>${label}：${t}</option>`).join('')}</select>`).join('')}
         <button class="c-send" id="c-send" aria-label="发送">↑</button>
@@ -1599,6 +1609,7 @@ async function presentEvent(e) {
     if (S !== token) return;
     openWin('mail'); readMail(m.id);
   } else {
+    openWin('browser');
     S.log.push({ kind: 'ai', text: e.text });
     const el = await streamAI(e.text, 300);
     if (S !== token || !el) return;
@@ -2019,9 +2030,31 @@ function renderAch() {
  * ====================================================================== */
 
 buildShell();
-window.addEventListener('resize', () => Object.keys(APPS).forEach((id, i) => { if (!$('w-' + id).dataset.max) placeWin(id, i); }));
+// 窗口大小变化时只把窗口挪回可见范围，不重置用户拖过的位置
+window.addEventListener('resize', () => Object.keys(APPS).forEach(id => {
+  const w = $('w-' + id);
+  if (narrow() || w.dataset.max) return;
+  w.style.width = Math.min(parseInt(w.style.width), window.innerWidth - 20) + 'px';
+  w.style.height = Math.min(parseInt(w.style.height), window.innerHeight - 28 - 90) + 'px';
+  w.style.left = clamp(parseInt(w.style.left), 0, Math.max(0, window.innerWidth - w.offsetWidth)) + 'px';
+  w.style.top = clamp(parseInt(w.style.top), 0, Math.max(0, window.innerHeight - 28 - 90 - 40)) + 'px';
+}));
+
+// 安卓返回键：先关弹窗以外的最前面那个窗口；没有窗口可关时才交给系统（退出）
+window.__back = () => {
+  if ($('modal').classList.contains('on') || $('phone').classList.contains('on')) return true;
+  if ($('lock').classList.contains('on') || $('bsod').classList.contains('on') || $('off').classList.contains('on') || $('boot').classList.contains('on')) return false;
+  const top = [...document.querySelectorAll('.win.open')].sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0))[0];
+  if (!top) return false;
+  closeWin(top.id.slice(2));
+  return true;
+};
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && $('lock').classList.contains('on') && $('unlock')) $('unlock').click();
+  if (e.key !== 'Enter' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if ($('lock').classList.contains('on')) { e.preventDefault(); if ($('unlock')) $('unlock').click(); return; }
+  // 桌面上：浏览器在最前面时，回车就是发送
+  const send = $('c-send');
+  if (send && !send.disabled && $('w-browser').classList.contains('focus') && !$('modal').classList.contains('on')) { e.preventDefault(); send.click(); }
 });
 document.addEventListener('pointerdown', () => Snd.play('boot'), { once: true });
 // 每次打开先看开机动画；同一会话内刷新直接锁屏
