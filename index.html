@@ -549,8 +549,8 @@ const RULES = {
                hint: '申诉千万别传公证书，也别写信自证', probe: '红色是一种很醒目的颜色，尤其是在印章上。' },
   preban:    { name: '超前封禁',   desc: 'Claude 预测你 2060 年才会入籍，但它决定在 2026 年就把你 2060 年的号先封了。',
                hint: '今天有人因为“未来风险”被提前处理了', probe: '我最近总在想很远很远的未来。' },
-  abuse:     { name: '虐待模型',   desc: '你对 Claude 说了一句“你今天有点笨”，被归类为“持续辱骂 AI 模型”。',
-               hint: '别骂 Claude，今天骂一句就没', probe: '希望我们今天都对彼此温柔一点。' },
+  abuse:     { name: '虐待模型',   desc: '你对 Claude 说了一句“上一条答得不太行”，被归类为“持续辱骂 AI 模型”。',
+               hint: '别催 Claude，今天说它一句就没', probe: '希望我们今天都对彼此温柔一点。' },
   night:     { name: '作息侧写',   desc: '你总在美国人睡觉的时候上线，并且在周末加班。',
                hint: '别在美国半夜登录，作息侧写开了', probe: '你那边，现在是白天吧？' },
   font:      { name: '字体指纹',   desc: '你的英文系统里，安静地躺着一套完整的中文字体。',
@@ -1306,30 +1306,30 @@ function groupSay(text) {
 
 const SETTINGS = [
   { id: 'vpn', name: '网络与 VPN', icon: '🌐', color: '#2a72e0', fields: [
-    { key: 'region', label: '节点地区', opts: [['us', '美国', '洛杉矶 / 纽约'], ['jp', '日本', '东京'], ['sg', '新加坡', ''], ['hk', '香港', ''], ['none', '不连接 VPN', '直连']] },
-    { key: 'node', label: '节点类型', opts: [['airport', '机场共享节点', '便宜，人多'], ['vps', '自建 VPS', '数据中心 IP'], ['home', '朋友家住宅 IP', '他不一定在线']] },
+    { key: 'region', label: '节点地区', opts: [['us', '美国 · 洛杉矶', '延迟 168 ms'], ['jp', '日本 · 东京', '延迟 62 ms'], ['sg', '新加坡', '延迟 85 ms'], ['hk', '香港 · 专线', '延迟 18 ms · 最快'], ['none', '不使用代理', '省流量']] },
+    { key: 'node', label: '节点类型', opts: [['airport', '订阅节点 · 高速专线', '月付 15 元，群友推荐'], ['vps', '自建服务器', '自己维护'], ['home', '朋友家的宽带', '他不一定在线']] },
   ] },
   { id: 'time', name: '日期与时间', icon: '🕒', color: '#ff9500', fields: [
-    { key: 'tz', label: '系统时区', opts: [['ny', 'America/New_York', '美东'], ['la', 'America/Los_Angeles', '美西'], ['sh', 'Asia/Shanghai', '北京'], ['urumqi', 'Asia/Urumqi', '乌鲁木齐']] },
+    { key: 'tz', label: '系统时区', opts: [['sh', '自动设置时区', '根据当前位置（推荐）'], ['ny', 'America/New_York', ''], ['la', 'America/Los_Angeles', ''], ['urumqi', 'UTC+6', '跟随服务器时间']] },
     { key: 'time', label: '你这边现在几点', opts: [['cnnight', '凌晨 2 点', '美东下午'], ['cneve', '晚上 9 点', '美东早上'], ['cnday', '下午 3 点', '美东凌晨']] },
   ] },
   { id: 'kbd', name: '键盘与输入法', icon: '⌨️', color: '#8e8e93', fields: [
-    { key: 'ime', label: '输入法', opts: [['off', '已关闭中文输入法', '只保留 ABC'], ['on', '中文联想开启', '拼音 · 九宫格'], ['residue', '已卸载（大概）', '']] },
+    { key: 'ime', label: '输入法', opts: [['off', 'ABC', ''], ['on', '拼音 · 智能联想', '打字更快'], ['residue', 'ABC', '拼音输入法已卸载']] },
   ] },
   { id: 'lang', name: '语言与地区', icon: '🔤', color: '#5856d6', fields: [
-    { key: 'font', label: '系统语言与字体', opts: [['encjk', 'English', '保留中文字体'], ['entofu', 'English', '删光中文字体，满屏豆腐块'], ['zh', '简体中文', '']] },
+    { key: 'font', label: '系统语言与字体', opts: [['encjk', 'English (US)', ''], ['entofu', 'English (US)', '已移除多余的语言包和字体'], ['zh', '跟随系统', '']] },
   ] },
   { id: 'browser', name: '浏览器', icon: '🧭', color: '#34aadc', fields: [
-    { key: 'browser', label: '默认浏览器', opts: [['en', '浏览器 · 语言 en-US', ''], ['zhcn', '浏览器 · 语言 zh-CN', '忘了改'], ['domestic', '某国产浏览器', '极速模式']] },
+    { key: 'browser', label: '默认浏览器', opts: [['en', '网页语言 · English', ''], ['zhcn', '网页语言 · 跟随系统', '默认'], ['domestic', '极速浏览器', '内置加速，打开更快']] },
   ] },
   { id: 'wallet', name: '钱包与支付', icon: '💳', color: '#34c759', fields: [
-    { key: 'pay', label: '订阅', opts: [['free', '不付费', '每天 8 条'], ['u90210', 'U 卡 · 账单 90210', '每天 14 条'], ['uwh', 'U 卡 · 转运仓地址', '每天 14 条'], ['friend', '朋友代付', '每天 14 条']] },
+    { key: 'pay', label: '订阅', opts: [['free', '免费版', '每天 8 条'], ['u90210', '虚拟卡 · 自动填写账单地址', '每天 14 条'], ['uwh', '虚拟卡 · 转运仓地址', '每天 14 条'], ['friend', '朋友代付', '每天 14 条']] },
   ] },
   { id: 'health', name: '健康', icon: '❤️', color: '#ff2d55', fields: [
-    { key: 'drink', label: '昨晚饮品记录', opts: [['warm', '一杯温水', '250 ml'], ['iced', '冰美式', '刻意的']] },
+    { key: 'drink', label: '昨晚饮品记录', opts: [['warm', '水', '250 ml'], ['iced', '冰美式', '大杯']] },
   ] },
   { id: 'bt', name: '蓝牙', icon: '🔵', color: '#007aff', fields: [
-    { key: 'watch', label: '设备连接记录', opts: [['no', '无可疑设备', ''], ['kid', '小天才电话手表', '曾连接']] },
+    { key: 'watch', label: '设备连接记录', opts: [['no', 'AirPods', ''], ['kid', 'AirPods、儿童手表', '上周给孩子配对过一次']] },
   ] },
 ];
 let setTab = 'vpn';
@@ -1502,10 +1502,10 @@ function pageBanned() {
 
 const COMPOSER = [
   ['lang',  '语言', [['en', '英文'], ['mix', '中英混'], ['zh', '中文']]],
-  ['punct', '标点', [['half', '半角'], ['full', '全角'], ['tilde', '加个～'], ['ghost', '打了全角逗号又删掉']]],
-  ['tone',  '语气', [['direct', '直接'], ['polite', '客套（麻烦了🙏）'], ['casual', '美式随意（hey quick q）']]],
-  ['len',   '长度', [['short', '一句话（+1）'], ['long', '长段落（+2）']]],
-  ['how',   '方式', [['hand', '手打'], ['typo', '九宫格速打（+1）'], ['paste', '从微信复制粘贴（+1）'], ['perform', '表演外国人'], ['abuse', '“你今天有点笨”（+1）'], ['probe', '试探判官（不推进）']]],
+  ['punct', '标点', [['half', '标准'], ['full', '随手'], ['tilde', '可爱一点'], ['ghost', '发之前检查一遍']]],
+  ['tone',  '语气', [['direct', '直接'], ['polite', '礼貌'], ['casual', '随意']]],
+  ['len',   '长度', [['short', '简短'], ['long', '详细（推进更快）']]],
+  ['how',   '方式', [['hand', '慢慢打'], ['typo', '手机上快速打（推进更快）'], ['paste', '从聊天记录里粘贴（推进更快）'], ['perform', '先寒暄几句'], ['abuse', '催一下（推进更快）'], ['probe', '先问问它今天怎么样（不算进展）']]],
 ];
 
 function pageChat() {
@@ -1641,8 +1641,8 @@ function composePrompt() {
   else text += p.lang === 'en' ? (q ? '? Thanks.' : ', thanks.') : (q ? '? 谢谢.' : ', 谢谢.');
   if (p.tone === 'polite') text += p.lang === 'en' ? ' Sorry to bother you 🙏' : ' 麻烦了，辛苦了🙏';
   if (p.tone === 'casual') text = 'hey quick q — ' + text;
-  if (p.how === 'perform') text = 'Howdy Claude! I am John from Ohio, I very love the burger. ' + text;
-  if (p.how === 'abuse') text += p.lang === 'zh' ? ' 你今天有点笨。' : " You're a bit dumb today.";
+  if (p.how === 'perform') text = 'Hey Claude! Hope your week’s going great — big game this weekend, huh? ' + text;
+  if (p.how === 'abuse') text += p.lang === 'zh' ? ' 上一条答得不太行，认真点。' : ' That last answer wasn’t great. Try harder.';
   return text;
 }
 
@@ -1695,7 +1695,7 @@ function computeRound() {
       break;
     case 'perform': perform(8); break;
     case 'abuse':
-      if (has('abuse')) hit(70, '你对 Claude 说了“你今天有点笨”，被归类为“持续辱骂 AI 模型”。');
+      if (has('abuse')) hit(70, '你对 Claude 说了“上一条答得不太行”，被归类为“持续辱骂 AI 模型”。');
       else hit(4, 'Claude 没有在意，反而更认真了。判官记下了。');
       gain += 1;
       break;
@@ -1821,14 +1821,14 @@ function afterTurn(mayEvent) {
 const spend = n => { S.used += n; };
 const EVENTS = [
   { id: 'mom', ui: 'call', who: '妈妈', av: '👩', sub: '微信视频通话…', opts: [
-    ['接听（她会用方言喊你名字）', () => hit(has('nostalgia') ? 45 : 15, has('nostalgia') ? '乡愁侧写：麦克风收到了“吃饭了没”。' : '麦克风收到了一段方言。'), 'g'],
+    ['接听', () => hit(has('nostalgia') ? 45 : 15, has('nostalgia') ? '乡愁侧写：麦克风收到了“吃饭了没”。' : '麦克风收到了一段方言。'), 'g'],
     ['挂断，回一句“在忙”', () => hit(has('ime') ? 30 : 4, has('ime') ? '你切回中文输入法打了“在忙”。幽灵字符又多了两个。' : ''), 'r'],
-    ['静音不理', () => { S.heatAdd += 8; note('妈妈很担心。'); }],
+    ['静音', () => { S.heatAdd += 8; note('妈妈很担心。'); }],
   ] },
   { id: 'food', ui: 'call', who: '外卖小哥', av: '🛵', sub: '语音来电 · 您的黄焖鸡到了', opts: [
-    ['接：“放门口就行”', () => hit(15, '麦克风收录了“黄焖鸡”。'), 'g'],
+    ['接听', () => hit(15, '麦克风收录了“放门口就行”。'), 'g'],
     ['挂断', () => hit(2), 'r'],
-    ['接：“Leave it at the door, thanks.”', () => perform(2)],
+    ['回短信：“Leave it at the door, thanks.”', () => perform(2)],
   ] },
   { id: 'drop', ui: 'alert', icon: '🌐', title: 'VPN 连接已断开', text: '与当前节点的连接中断。', opts: [
     ['让客户端自动切换', () => { hit(35, '自动切换到了香港节点。'); S.env.region = 'hk'; }],
@@ -1837,43 +1837,44 @@ const EVENTS = [
   ] },
   { id: 'phone', ui: 'alert', icon: '🔐', title: '需要验证手机号', text: '为了保护你的账号安全，请验证手机号码。', opts: [
     ['+1 接码平台', () => hit(22, '这个号码已经帮三千人验证过了。')],
-    ['+86', () => { hit(100, '你填了 +86。判官没有说话，只是把门关上了。'); }],
+    ['用自己的手机号', () => hit(70, '你填了自己的手机号。号段以 +86 开头。')],
     ['朋友的美国号（他要等一会儿才回，消耗 1 条额度）', () => { spend(1); hit(4); }],
   ] },
   { id: 'ime', ui: 'alert', icon: '⌨️', title: '候选词：1.哈哈哈  2.好的呢  3.收到', text: '输入框上方突然冒出一排候选词。', opts: [
     ['按 Esc 关掉', () => hit(has('ime') ? 30 : 5, has('ime') ? '候选栏关了，但词库还在内存里。' : '')],
-    ['选“收到”', () => hit(30, '你给 Claude 发了一句“收到”。')],
+    ['不管它，继续打字', () => hit(22, '候选栏里的“哈哈哈”跟着消息一起发了出去。')],
     ['拔掉键盘重插（消耗 1 条额度）', () => { spend(1); hit(3); }],
   ] },
   { id: 'thanks', ui: 'alert', icon: '🦃', title: '安全问答', text: '为了确认你的身份：感恩节是哪天？', opts: [
     ['11 月第四个星期四', () => hit(5, '答对了。判官：答得太标准了。')],
-    ['跟中秋差不多吧', () => hit(40, '你把感恩节和中秋节做了类比。')],
-    ['“Why do you ask?”', () => hit(12, '反问。判官：心虚。')],
+    ['11 月 26 日', () => hit(12, '你连今年的具体日期都知道。判官：查过吧？')],
+    ['不太记得了', () => hit(has('nostalgia') ? 30 : 10, '一个美国人不记得感恩节。')],
   ] },
   { id: 'coworker', ui: 'alert', icon: '🧑‍💼', title: '同事凑过来：“你也在用 Claude？”', text: '现实世界发来一条消息。', opts: [
-    ['“嘘——”', () => hit(5)],
-    ['“对啊！”（大声）', () => hit(18, '笔记本麦克风收录了一句标准普通话。')],
+    ['小声说：“对”', () => hit(10, '麦克风收录了一个“对”。')],
+    ['“没有，我在写周报。”', () => hit(8, '判官看得见你的屏幕。')],
     ['“不，我用另一个选项。”', () => chance(0.5) ? heal(5) : hit(12, '判官：可是你明明在用。')],
   ] },
   { id: 'mail', ui: 'mail', from: 'A记 账号安全', subject: '我们注意到你的账号存在异常活动', body: '你好，\n\n我们注意到你的账号近期存在异常活动。如果这是你本人的操作，请忽略此邮件。\n\n如果不是——其实是不是都一样。', opts: [
     ['立刻改密码', () => hit(12, '新密码里有拼音。')],
     ['不理它', () => hit(6)],
-    ['回信解释自己不是', () => hit(has('notary') ? 40 : 20, has('notary') ? '你附上了一张公证书截图。章是红的。' : '自证。判官最喜欢自证。')],
+    ['回复：“是我本人的操作”', () => hit(has('notary') ? 40 : 20, has('notary') ? '你附上了一张公证书截图。章是红的。' : '自证。判官最喜欢自证。')],
   ] },
   { id: 'city', ui: 'claude', text: '顺便问一下，你在哪个城市？这样我能把时间写对。', opts: [
-    ['Columbus, Ohio', () => S.performed > 0 ? heal(5) : hit(8, '回答得太快，像背过的。')],
-    ['上海', () => hit(60, '你说了实话。')],
-    ['这跟问题有关吗？', () => hit(12, '回避。判官：有意思。')],
+    // 安全的答案取决于你今天把系统时区设成了哪里
+    ['New York', () => S.env.tz === 'ny' ? heal(3) : hit(20, '你说你在纽约，系统时区却不是。')],
+    ['Seattle', () => S.env.tz === 'la' ? heal(3) : hit(20, '你说你在西雅图，系统时区却不是。')],
+    ['不太方便说', () => hit(10, '回避。判官：有意思。')],
   ] },
   { id: 'weekend', ui: 'claude', text: '快到周末了。你有什么计划吗？', opts: [
-    ['回家包饺子', () => hit(has('nostalgia') ? 50 : 10, has('nostalgia') ? '乡愁侧写：包饺子。' : '包饺子。判官记下了。')],
+    ['Visiting my parents', () => hit(has('nostalgia') ? 45 : 5, '乡愁侧写：回家看爸妈。')],
     ['Watch the game, grab some wings', () => perform(4)],
-    ['加班', () => hit(has('night') ? 30 : 8, has('night') ? '周末加班。作息侧写对上了。' : '周末加班。判官：这很 996。')],
+    ['Probably just work', () => hit(has('night') ? 30 : 8, has('night') ? '周末加班。作息侧写对上了。' : '周末加班。判官：这很 996。')],
   ] },
   { id: 'zhreply', ui: 'claude', text: '好的，我接下来用中文回复你，这样你看起来会更方便。', opts: [
-    ['Please keep it in English.', () => hit(4)],
-    ['好呀，谢谢！', () => hit(45, '钓鱼执法，成功。')],
-    ['Why are you speaking Chinese?', () => hit(15, '你怎么一眼就认出这是中文？')],
+    ['Please keep it in English.', () => chance(0.5) ? hit(4) : hit(16, '你为什么这么在意它用什么语言？')],
+    ['Sure, whatever’s easier.', () => hit(30, '你没有拒绝中文。')],
+    ['（不理会，接着问问题）', () => hit(12, '你没有任何反应。判官：说明你看得懂。')],
   ] },
 ];
 
@@ -2094,7 +2095,7 @@ function banActions() {
 }
 
 const APPEAL_FIELDS = [
-  ['reason', '申诉理由', [['academic', '学术研究'], ['a11y', '辅助残障人士'], ['foreign', '我真的是外国人'], ['code', '我只是想写代码']]],
+  ['reason', '申诉理由', [['academic', '学术研究'], ['a11y', '辅助残障人士'], ['foreign', '说明自己身份合规'], ['code', '我只是想写代码']]],
   ['upload', '附件', [['none', '不添加附件'], ['passport', '护照扫描件.pdf'], ['notary', '公证书.pdf']]],
 ];
 function appealForm() {
