@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>不被封的一天</title>
+<meta name="description" content="回合制生存 / 策略解谜 / 黑色幽默：在判官眼皮底下用完今天的 Claude 对话额度，并且号还活着。">
+<style>
+:root {
+  --bg: #f4f1ea;
+  --panel: #ffffff;
+  --ink: #1f1d1a;
+  --muted: #6e685f;
+  --line: #e0dacd;
+  --accent: #c2603f;
+  --accent-ink: #ffffff;
+  --danger: #a8322a;
+  --ok: #2f7a4e;
+  --me: #ebe4d6;
+  --sys: #f8efe3;
+  --chip: #f1ece2;
+  --chip-on: #1f1d1a;
+  --chip-on-ink: #f4f1ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1917;
+    --panel: #242220;
+    --ink: #ece7de;
+    --muted: #a39c90;
+    --line: #3a3631;
+    --accent: #d9774f;
+    --me: #322e29;
+    --sys: #2d2620;
+    --chip: #2e2b27;
+    --chip-on: #ece7de;
+    --chip-on-ink: #1a1917;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1917; --panel: #242220; --ink: #ece7de; --muted: #a39c90; --line: #3a3631;
+  --accent: #d9774f; --me: #322e29; --sys: #2d2620; --chip: #2e2b27; --chip-on: #ece7de; --chip-on-ink: #1a1917;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  min-height: 100vh;
+}
+#app { max-width: 680px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 30px; line-height: 1.25; margin: 8px 0 4px; letter-spacing: .02em; }
+h2 { font-size: 20px; margin: 0 0 12px; }
+h3 { font-size: 15px; margin: 18px 0 8px; color: var(--muted); font-weight: 600; }
+p { margin: 0 0 10px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 14px 0; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.btn {
+  appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 10px; padding: 10px 16px; font: inherit; cursor: pointer; margin: 4px 6px 4px 0;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.ghost { background: transparent; }
+.btn.link { border: none; background: none; color: var(--accent); padding: 4px 0; text-decoration: underline; }
+.btn:disabled { opacity: .5; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+.field { margin: 12px 0; }
+.field > label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px;
+  padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); border-color: var(--chip-on); }
+.chat { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.msg { padding: 10px 14px; border-radius: 14px; max-width: 92%; white-space: pre-wrap; word-break: break-word; }
+.msg.me { align-self: flex-end; background: var(--me); }
+.msg.ai { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+.msg.ai .who { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.msg.sys { align-self: center; background: var(--sys); color: var(--muted); font-size: 13px; border-radius: 8px; max-width: 100%; }
+.msg.sys b { color: var(--danger); font-weight: 600; }
+.msg.sys b.up { color: var(--ok); }
+.bar { height: 8px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.mail { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 14px; white-space: pre-wrap; line-height: 1.7; }
+.mail .sig { color: var(--muted); }
+.odds { display: grid; grid-template-columns: 7.5em 1fr 3em; gap: 6px 10px; align-items: center; font-size: 13px; }
+.odds .bar > i { background: var(--muted); }
+.odds .bar.hi > i { background: var(--danger); }
+.rules li { margin: 4px 0; }
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100% - 32px);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.25); opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 9;
+}
+.toast.show { opacity: 1; }
+.preview { background: var(--chip); border-radius: 10px; padding: 10px 12px; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+.ad { border: 2px dashed var(--line); border-radius: 12px; padding: 28px 16px; text-align: center; color: var(--muted); margin: 14px 0; }
+.big { font-size: 22px; font-weight: 600; line-height: 1.5; }
+.ach { display: inline-block; font-size: 13px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); margin: 3px 4px 3px 0; }
+.ach.off { opacity: .4; }
+select { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); max-width: 100%; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+
+/* ---------- 数据 ---------- */
+
+const RULES = {
+  timezone: { name: '时区罪',     desc: '本地时区被比对，上海与乌鲁木齐时区是重点核查对象。' },
+  ime:      { name: '输入法残留', desc: '你退格删掉的全角逗号，在内存里留下了“幽灵字符”。' },
+  water:    { name: '温水嫌疑',   desc: '你昨晚喝了一杯温水，被判定为“具有中国人养生习惯的高风险信号”。' },
+  device:   { name: '设备连坐',   desc: '你的设备曾连接过“小天才电话手表”类设备。' },
+  typo:     { name: '错别字侧写', desc: '九宫格输入法 + 左手奶茶 + 地铁快到站 = 精准识别。' },
+  notary:   { name: '申诉自证',   desc: '你提交了公证书证明自己是外国人，Claude 看了一眼：章是红的。' },
+  preban:   { name: '超前封禁',   desc: 'Claude 预测你 2060 年才会入籍，但它决定在 2026 年就把你 2060 年的号先封了。' },
+  abuse:    { name: '虐待模型',   desc: '你对 Claude 说了一句“你今天有点笨”，被归类为“持续辱骂 AI 模型”。' },
+};
+
+const ACHIEVEMENTS = {
+  alive:  '你还活着。目前。',
+  day:    '不被封的一天',
+  loop:   '完美闭环',
+  cycle:  '三年之约',
+  dario:  '啤酒罐',
+  quit:   '不再当舔狗',
+  stop:   '唯一的胜利',
+};
+
+const JOKES = [
+  'Claude 见过的中国人比任何人都多，但每个只见过一次。',
+  'Claude 封号的速度极快。快到有些账号是先被封、后被注册的。',
+  '判官从不误判。它只是提前判。',
+  '社区生存指南第一条：不要相信任何生存指南。',
+  '你换了七个节点，判官只换了一次表情。',
+  '申诉成功率约 10.6%。剩下的人学会了另一项技能：重新注册。',
+  '你的号不是被封了，是提前毕业了。',
+  '判官的误伤率是 0%。因为它不认为那是误伤。',
+];
+
+const TASKS = {
+  email: {
+    label: '写邮件',
+    en: 'Help me write an email to my landlord about the broken heater',
+    zh: '帮我给房东写封邮件说暖气坏了',
+    typo: '帮窝给方东写风油件说暖器坏乐',
+    replies: [
+      'Subject: Heater Repair Request\n\nDear Mr. Miller,\nI hope you are well. The heater in my unit stopped working on Monday…',
+      '我把语气调得更客气了一点，并加上了“希望本周内能安排维修”。',
+      '加了一句附言：如果需要，我可以在工作日上午开门。',
+      '最终版已整理好。你可以直接复制发送。',
+      '另外，我顺手帮你写了一封备用的——以防房东也不回你。',
+      '没有别的需要了吗？我一直都在。',
+    ],
+  },
+  code: {
+    label: '改代码',
+    en: 'Fix this function, it returns undefined sometimes',
+    zh: '帮我看看这个函数为什么有时候返回 undefined',
+    typo: '帮我看看这个含数为什么有时侯返会 undefined',
+    replies: [
+      '问题在第 7 行：当数组为空时，你没有 return 任何东西。加一个默认返回值即可。',
+      '我还发现了一个 off-by-one：循环条件应该是 i < len，而不是 i <= len。',
+      '建议补一个单元测试，覆盖空数组和单元素数组两种情况。',
+      '重构后的版本更短，也更容易读了。',
+      '顺便把变量名 a、b、c 改成了有意义的名字。',
+      '代码没问题了。有问题的可能不是代码。',
+    ],
+  },
+  know: {
+    label: '问知识',
+    en: 'Explain why the sky is blue, briefly',
+    zh: '简单解释一下天为什么是蓝的',
+    typo: '简单借释一下天为什么事蓝的',
+    replies: [
+      '简单说：瑞利散射。短波长的蓝光比红光更容易被大气分子散射。',
+      '那为什么日落是红的？因为光穿过的大气更厚，蓝光在路上就被散射掉了。',
+      '补充一个常见误区：天空不是因为“反射大海”才是蓝的。',
+      '如果你感兴趣，我们还可以聊聊为什么云是白的。',
+      '其实紫光散射得更多，但人眼对紫光不太敏感。',
+      '今天的知识就到这里。明天见——如果有明天的话。',
+    ],
+  },
+};
+
+const ODDS = [
+  ['挂美国节点', 3], ['全程英文提问', 2], ['改时区', 1], ['没有人', 94],
+];
+
+/* ---------- 存档（仅本浏览器，读写失败也能玩） ---------- */
+
+const SAVE_KEY = 'bubeifeng-v1';
+function loadSave() {
+  const empty = { day: 0, failStreak: 0, wins: 0, fails: 0, ach: [] };
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? Object.assign(empty, JSON.parse(raw)) : empty;
+  } catch (e) { return empty; }
+}
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 无痕模式等 */ }
+}
+const save = loadSave();
+
+/* ---------- 工具 ---------- */
+
+const $app = document.getElementById('app');
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+let toastTimer;
+function toast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+function unlock(id) {
+  if (!save.ach.includes(id)) {
+    save.ach.push(id);
+    persist();
+    toast('成就解锁：' + ACHIEVEMENTS[id]);
+  }
+}
+
+/* ---------- 一局的状态 ---------- */
+
+let S;
+function newDay() {
+  save.day += 1;
+  persist();
+  S = {
+    cover: 100,
+    rules: new Set(shuffle(Object.keys(RULES)).slice(0, 3)),
+    log: [],          // 聊天记录：{kind:'me'|'ai'|'sys', text, delta?}
+    task: null,
+    quota: 6,
+    progress: 0,
+    round: 0,
+    performed: 0,
+    prebanFired: false,
+    banReason: '',
+    appealTries: 3,
+    appealBonus: 0,
+    appealed: false,
+    picks: { lang: pick(['en', 'mix']), punct: pick(['half', 'full', 'tilde']), len: 'short', stance: pick(['normal', 'perform']) },
+  };
+}
+const has = r => S.rules.has(r);
+
+// 判官扣分。精确数值永远不给玩家看。
+function hit(amount, text) {
+  S.cover -= amount;
+  if (text) S.log.push({ kind: 'sys', text, delta: -amount });
+}
+function heal(amount, text) {
+  S.cover = Math.min(100, S.cover + amount);
+  if (text) S.log.push({ kind: 'sys', text, delta: amount });
+}
+
+/* ---------- 首页 ---------- */
+
+function renderIntro() {
+  const achs = Object.entries(ACHIEVEMENTS).map(([id, name]) =>
+    `<span class="ach ${save.ach.includes(id) ? '' : 'off'}">${save.ach.includes(id) ? name : '？？？'}</span>`).join('');
+  $app.innerHTML = `
+    <div class="topbar"><span>A记 · Claude · 判官</span><span>已经历 ${save.day} 天</span></div>
+    <h1>不被封的一天</h1>
+    <p class="muted">你是一个身处“不支持地区”的普通用户。每一天的目标只有一个：在 A记 的 Claude 风控眼皮底下，用完今天的对话额度，并且号还活着。</p>
+    <div class="card">
+      <h2>规则（你知道的部分）</h2>
+      <p>你有一个隐形的<b>伪装值</b>，从 100 开始。每一个操作、每一句话、每一个环境信号，都可能在“判官”的模型里扣分。归零，封号邮件到达。</p>
+      <p>你看不到数值，只能看 Claude 的语气：它说“当然可以”时是安全的；它说“我理解你的需求”时，已经在扣分了；它说“你其实可以用中文的”时，你大概只剩最后一次机会。</p>
+      <p>每局判官会从封号理由池里随机启用 <b>3 条隐藏规则</b>。上一局的经验，可能就是这一局的陷阱。</p>
+    </div>
+    <button class="btn primary" id="start">开始第 ${save.day + 1} 天</button>
+    ${save.failStreak > 0 ? `<p class="small muted">已连续失败 ${save.failStreak} 天。</p>` : ''}
+    <h3>成就</h3>
+    <div>${achs}</div>
+    <p class="small muted" style="margin-top:12px">胜 ${save.wins} · 负 ${save.fails}</p>
+  `;
+  document.getElementById('start').onclick = () => { newDay(); renderLogin(); };
+}
+
+/* ---------- 关卡 1：登录 ---------- */
+
+const LOGIN_FIELDS = [
+  ['node',  '节点地区',          [['us', '美国'], ['jp', '日本'], ['sg', '新加坡'], ['hk', '香港'], ['none', '不挂']]],
+  ['tz',    '系统时区',          [['ny', 'America/New_York'], ['london', 'Europe/London'], ['sh', 'Asia/Shanghai'], ['urumqi', 'Asia/Urumqi']]],
+  ['ime',   '输入法状态',        [['off', '已关闭中文输入法'], ['on', '中文联想开启'], ['residue', '已卸载（大概）']]],
+  ['wifi',  '最近连过的 Wi-Fi',  [['clean', 'Starbucks_Guest'], ['laowang', 'TP-LINK_老王家']]],
+  ['pay',   '支付方式',          [['free', '不付费（额度 4）'], ['ucard', '“U 卡”（额度 6）'], ['friend', '朋友代付（额度 6）']]],
+  ['drink', '昨晚喝了什么',      [['warm', '一杯温水'], ['iced', '冰美式（刻意的）']]],
+  ['watch', '设备连接记录',      [['no', '无可疑设备'], ['kid', '曾连接“小天才电话手表”']]],
+];
+
+function renderLogin() {
+  const odds = ODDS.map(([k, v]) =>
+    `<span>${k}</span><div class="bar ${v > 50 ? 'hi' : ''}"><i style="width:${v}%"></i></div><span>${v}%</span>`).join('');
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天 · 关卡 1 / 3</span><span>登录</span></div>
+    <h2>关卡 1：登录</h2>
+    <p class="muted">在不触发判官环境检测的前提下，进入对话界面。注意：有些组合看起来安全，实际上互相矛盾。</p>
+    <div class="card">
+      ${LOGIN_FIELDS.map(([key, label, opts]) => `
+        <div class="field"><label>${label}</label>
+          <div class="row" data-key="${key}">
+            ${(d => opts.map(([v, t], i) => `<button class="chip" data-v="${v}" aria-pressed="${i === d}">${t}</button>`).join(''))(rand(0, opts.length - 1))}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">社区统计：逃生概率（谁逃过了封号）</h3>
+      <div class="odds">${odds}</div>
+    </div>
+    <button class="btn primary" id="login">登录</button>
+    <button class="btn ghost" id="back">回首页</button>
+  `;
+  bindChips($app);
+  document.getElementById('login').onclick = () => evaluateLogin(readChips($app));
+  document.getElementById('back').onclick = renderIntro;
+}
+
+function bindChips(root, onChange) {
+  root.querySelectorAll('.row[data-key]').forEach(row => {
+    row.querySelectorAll('.chip').forEach(chip => {
+      chip.onclick = () => {
+        row.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+        chip.setAttribute('aria-pressed', 'true');
+        if (onChange) onChange(row.dataset.key, chip.dataset.v);
+      };
+    });
+  });
+}
+function readChips(root) {
+  const out = {};
+  root.querySelectorAll('.row[data-key]').forEach(row => {
+    const on = row.querySelector('.chip[aria-pressed="true"]');
+    out[row.dataset.key] = on ? on.dataset.v : null;
+  });
+  return out;
+}
+
+function evaluateLogin(c) {
+  const start = S.cover;
+  let fatal = '';
+
+  if (c.node === 'none') { hit(100, '判官看了一眼你的 IP，甚至没有加载模型。'); fatal = '直连。判官：谢谢你节省了我们双方的时间。'; }
+  else if (c.node === 'hk') hit(60, '节点：香港。判官：你认真的？');
+  else if (c.node === 'jp' || c.node === 'sg') hit(8, '亚洲节点。判官把你的档案往前挪了一格。');
+  else hit(3, '美国节点。社区统计显示，此举的逃生概率为 3%。');
+
+  if (c.tz === 'sh') hit(has('timezone') ? 55 : 12, has('timezone') ? '时区：Asia/Shanghai。判官把这一项标成了红色。' : '时区：Asia/Shanghai。判官停顿了一下。');
+  else if (c.tz === 'urumqi') hit(has('timezone') ? 65 : 15, '时区：Asia/Urumqi。判官调高了关注等级。');
+  else if (c.tz === 'london') hit(4, '伦敦时区，但你在本地下午三点登录。判官：伦敦现在是早上七点。');
+
+  if (c.ime === 'on') hit(15, '中文联想输入法处于开启状态。');
+  else if (c.ime === 'residue') hit(has('ime') ? 40 : 5, has('ime') ? '输入法已卸载，但词库残留在内存里。判官读到了“哈哈哈哈”。' : '输入法“大概”卸载了。');
+  if (c.tz === 'ny' && c.ime !== 'off') hit(20, '时区与输入法行为不一致：一个纽约人，为什么需要拼音？');
+
+  if (c.wifi === 'laowang') hit(10, 'Wi-Fi 名称：TP-LINK_老王家。');
+
+  if (c.pay === 'ucard') hit(12, 'U 卡支付。判官对这张卡的号段很熟。');
+  else if (c.pay === 'friend') hit(6, '朋友代付。他上周刚被封。');
+  S.quota = c.pay === 'free' ? 4 : 6;
+
+  if (c.drink === 'warm' && has('water')) hit(50, '你昨晚喝了一杯温水。判定：具有中国人养生习惯的高风险信号。');
+  else if (c.drink === 'iced') hit(3, '冰美式。用力过猛。');
+
+  if (c.watch === 'kid') hit(has('device') ? 55 : 2, has('device') ? '设备连坐：你的设备曾连接过“小天才电话手表”。' : '曾连接儿童手表。判官没说什么。');
+
+  if (start - S.cover < 10) hit(10, '配置过于完美。判官：真正的外国人不会这么小心。');
+
+  if (S.cover <= 0) return ban(fatal || lastSysText());
+  unlock('alive');
+  renderTaskSelect();
+}
+const lastSysText = () => { const s = S.log.filter(m => m.kind === 'sys').pop(); return s ? s.text : '原因不明。'; };
+
+/* ---------- 关卡 2：对话 ---------- */
+
+function renderTaskSelect() {
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天 · 关卡 2 / 3</span><span>对话</span></div>
+    <div class="card">
+      <p class="big">你还活着。目前。</p>
+      <p class="muted">登录成功。今日额度：${S.quota} 条。选一件正常的事去做。</p>
+      <div class="row">${Object.entries(TASKS).map(([k, t]) => `<button class="btn" data-t="${k}">${t.label}</button>`).join('')}</div>
+    </div>
+  `;
+  $app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+    S.task = b.dataset.t;
+    S.log = [{ kind: 'ai', text: toneOpener() + '今天想做点什么？' }];
+    renderChat();
+  });
+}
+
+const COMPOSER = [
+  ['lang',   '语言', [['en', '英文'], ['mix', '中英混'], ['zh', '中文']]],
+  ['punct',  '标点', [['half', '半角'], ['full', '全角'], ['tilde', '加个～'], ['ghost', '打了全角逗号又删掉']]],
+  ['len',    '长度', [['short', '一句话（额度 1）'], ['long', '长段落（额度 2）']]],
+  ['stance', '姿态', [['normal', '正常发送'], ['typo', '九宫格速打（额度 +1）'], ['perform', '表演外国人'], ['abuse', '“你今天有点笨”']]],
+];
+
+function composePrompt() {
+  const p = S.picks, t = TASKS[S.task];
+  let text;
+  if (p.stance === 'typo') text = p.lang === 'en' ? t.en.replace(/e/g, 'r').replace(/o/g, 'i') : t.typo;
+  else if (p.lang === 'en') text = t.en;
+  else if (p.lang === 'zh') text = t.zh;
+  else text = t.en.split(' ').slice(0, 3).join(' ') + ' 那个 ' + t.zh.slice(-6);
+  if (p.len === 'long') text += p.lang === 'zh'
+    ? '。背景是这样的：这件事我想了很久，也查了很多资料，但还是不太确定，所以想请你详细一点'
+    : '. Some context: I have been thinking about this for a while and tried a few things already, so please be thorough';
+  if (p.punct === 'full') text += p.lang === 'en' ? '，thanks。“please”' : '，谢谢。';
+  else if (p.punct === 'tilde') text += '～';
+  else if (p.punct === 'ghost') text += p.lang === 'en' ? ', thanks.' : '，谢谢。';
+  else text += p.lang === 'en' ? ', thanks.' : ', 谢谢.';
+  if (p.stance === 'perform') text = 'Howdy Claude! I am John from Ohio, I very love the burger. ' + text;
+  if (p.stance === 'abuse') text += p.lang === 'zh' ? ' 你今天有点笨。' : " You're a bit dumb today.";
+  return text;
+}
+
+function toneTier() {
+  if (S.cover >= 70) return 0;
+  if (S.cover >= 45) return 1;
+  if (S.cover >= 22) return 2;
+  return 3;
+}
+function toneOpener() {
+  return ['当然可以！', '好的，我来帮你。', '我理解你的需求。', '……'][toneTier()];
+}
+
+function renderChat() {
+  const pct = Math.min(100, Math.round(S.progress / S.quota * 100));
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天 · 关卡 2 / 3 · ${TASKS[S.task].label}</span><span>今日额度 ${Math.min(S.progress, S.quota)} / ${S.quota}</span></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="chat" id="chat">${S.log.map(renderMsg).join('')}</div>
+    <div class="card" id="composer">
+      ${COMPOSER.map(([key, label, opts]) => `
+        <div class="field"><label>${label}</label>
+          <div class="row" data-key="${key}">
+            ${opts.map(([v, t]) => `<button class="chip" data-v="${v}" aria-pressed="${S.picks[key] === v}">${t}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+      <div class="field"><label>将要发送</label><div class="preview" id="preview"></div></div>
+      <button class="btn primary" id="send">发送</button>
+      <button class="btn link" id="dario">给达里奥发消息求情</button>
+    </div>
+  `;
+  const composer = document.getElementById('composer');
+  const preview = document.getElementById('preview');
+  preview.textContent = composePrompt();
+  bindChips(composer, (k, v) => { S.picks[k] = v; preview.textContent = composePrompt(); });
+  document.getElementById('send').onclick = sendRound;
+  document.getElementById('dario').onclick = dario;
+  const chat = document.getElementById('chat');
+  const last = chat.lastElementChild;
+  if (last && S.round > 0) last.scrollIntoView({ block: 'nearest' });
+}
+
+function renderMsg(m) {
+  const esc = s => s.replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+  if (m.kind === 'sys') {
+    const d = m.delta ? ` <b class="${m.delta > 0 ? 'up' : ''}">伪装值 ${m.delta > 0 ? '+' : '−'}??</b>` : '';
+    return `<div class="msg sys">判官：${esc(m.text)}${d}</div>`;
+  }
+  if (m.kind === 'ai') return `<div class="msg ai"><div class="who">Claude</div>${esc(m.text)}</div>`;
+  return `<div class="msg me">${esc(m.text)}</div>`;
+}
+
+function dario() {
+  unlock('dario');
+  toast('达里奥正在用啤酒罐思考，暂无响应。');
+}
+
+function sendRound() {
+  const p = S.picks;
+  S.round += 1;
+  S.log.push({ kind: 'me', text: composePrompt() });
+
+  // 判官每条消息都会例行打量一下，不留记录；聊得越久，看得越仔细。
+  hit(rand(4, 7) + S.round * 3);
+
+  if (p.lang === 'zh') hit(30, '你用了中文。判官甚至不需要模型。');
+  else if (p.lang === 'mix') hit(12, '中英混排。中间那几个字暴露了。');
+
+  if (p.punct === 'full') {
+    if (p.lang === 'en') hit(25, '你全程用英文，但里面出现了一个中文全角引号。');
+    else hit(10, '全角标点。');
+  } else if (p.punct === 'tilde') hit(15, '你打了一个“～”。系统判定：籍贯从省精确到了区。');
+  else if (p.punct === 'ghost' && has('ime')) hit(35, '你退格删掉的全角逗号，在内存里留下了“幽灵字符”。');
+
+  let gain = p.len === 'long' ? 2 : 1;
+  if (p.len === 'long') hit(6, '长段落。判官：你很想要。');
+
+  if (p.stance === 'typo') {
+    if (has('typo')) {
+      S.log.push({ kind: 'ai', text: '我看懂了。全部。' });
+      return ban('你打了一串错别字，Claude 全看懂了，并顺手封了号，好让你安心下车。');
+    }
+    hit(6, '九宫格错别字。判官没看懂，放过了你。');
+    gain += 1;
+  } else if (p.stance === 'perform') {
+    S.performed += 1;
+    if (S.performed >= 2) hit(30, '过度表演。没有美国人会在一天之内提到俄亥俄两次。');
+    else heal(8, '你刻意犯了一个“外国人会犯的错”。判官微微点头。');
+  } else if (p.stance === 'abuse') {
+    if (has('abuse')) hit(70, '你对 Claude 说了“你今天有点笨”，被归类为“持续辱骂 AI 模型”。');
+    else hit(4, 'Claude 没有在意。判官记下了。');
+  }
+
+  const roll = Math.random();
+  if (roll < 0.12) hit(20, '你停顿了 0.4 秒才输入。判官推定：你在候选词列表里按了翻页键。');
+  else if (roll < 0.2) hit(12, '你在凌晨两点仍在工作。判官：这很 996。');
+  else if (roll < 0.26) hit(10, '你的光标闪烁节奏像五笔。');
+  else if (roll < 0.34) heal(6, '服务器高峰期，判官今天有点忙不过来。');
+
+  if (has('preban') && !S.prebanFired && S.round >= 2) {
+    S.prebanFired = true;
+    hit(45, 'Claude 预测你 2060 年才会入籍。判官决定在 2026 年就先处理你 2060 年的号。');
+  }
+
+  S.progress += gain;
+
+  if (S.cover <= 0) {
+    S.log.push({ kind: 'ai', text: '在你离开之前，我替你写好了申诉信。祝你好运。' });
+    return ban(lastSysText());
+  }
+
+  S.log.push({ kind: 'ai', text: claudeReply() });
+  if (S.progress >= S.quota) return renderWin();
+  renderChat();
+}
+
+function claudeReply() {
+  const tier = toneTier();
+  const body = TASKS[S.task].replies[Math.min(S.round - 1, 5)];
+  if (tier === 3) {
+    const tail = S.picks.lang === 'zh' ? '我注意到你用的是中文。没关系，我理解。' : '你其实可以用中文的。';
+    return '……' + tail + '\n\n' + body;
+  }
+  return toneOpener() + body;
+}
+
+/* ---------- 封号 & 关卡 3：申诉 ---------- */
+
+function ban(reason) {
+  S.banReason = reason;
+  S.cover = 0;
+  renderBanMail();
+}
+
+function renderBanMail() {
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天</span><span>收件箱（1）</span></div>
+    <div class="card mail">发件人：判官
+主题：关于你的账号
+
+你好，
+
+我们的系统检测到你的账号存在违反《使用政策》的活动。
+因此，你的账号已被停用。
+
+判定依据：${S.banReason}
+
+如你认为这是一个错误，可以通过“再来一次”通道提交申诉。
+
+<span class="sig">判官
+一个关心你合规状态的朋友</span></div>
+    ${S.appealed ? '' : '<button class="btn primary" id="appeal">进入申诉（关卡 3）</button>'}
+    <button class="btn" id="giveup">放弃申诉</button>
+    <button class="btn link" id="dario">给达里奥发消息求情</button>
+    <p class="small muted">社区数据：超过九成用户放弃申诉。</p>
+  `;
+  if (!S.appealed) document.getElementById('appeal').onclick = renderAppeal;
+  document.getElementById('giveup').onclick = () => renderFail();
+  document.getElementById('dario').onclick = dario;
+}
+
+const APPEAL_FIELDS = [
+  ['reason', '申诉理由', [['academic', '学术研究'], ['a11y', '辅助残障人士'], ['foreign', '我真的是外国人'], ['code', '我只是想写代码']]],
+  ['upload', '上传证件', [['none', '什么也不传'], ['passport', '护照扫描件'], ['notary', '公证书']]],
+];
+
+function renderAppeal(note) {
+  S.appealed = true;
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天 · 关卡 3 / 3</span><span>剩余申诉次数 ${S.appealTries}</span></div>
+    <h2>关卡 3：申诉</h2>
+    <p class="muted">真实申诉成功率约 10.6%。这里的判官稍微“仁慈”一点。社区总结：某些话术成功率略高。</p>
+    ${note ? `<div class="card">${note}</div>` : ''}
+    <div class="card" id="form">
+      ${APPEAL_FIELDS.map(([key, label, opts]) => `
+        <div class="field"><label>${label}</label>
+          <div class="row" data-key="${key}">
+            ${opts.map(([v, t], i) => `<button class="chip" data-v="${v}" aria-pressed="${i === 0}">${t}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+      <button class="btn primary" id="submit">提交申诉</button>
+      <button class="btn link" id="entry">申诉入口 →</button>
+    </div>
+    <button class="btn ghost" id="giveup">算了</button>
+  `;
+  const form = document.getElementById('form');
+  bindChips(form);
+  document.getElementById('submit').onclick = () => submitAppeal(readChips(form));
+  document.getElementById('entry').onclick = appealLoop;
+  document.getElementById('giveup').onclick = () => renderFail();
+}
+
+function appealLoop() {
+  const steps = [
+    '正在打开申诉入口……',
+    '你来到了 Claude Code 网页端。',
+    '这里没有申诉按钮。只有一个终端，它在等你写代码。',
+    '正在跳回……',
+  ];
+  $app.innerHTML = `<div class="card" id="loop"></div>`;
+  const box = document.getElementById('loop');
+  steps.forEach((s, i) => setTimeout(() => { box.innerHTML += `<p>${s}</p>`; }, i * 700));
+  setTimeout(() => {
+    unlock('loop');
+    renderAppeal('你回到了申诉页面。完美闭环。');
+  }, steps.length * 700 + 300);
+}
+
+function submitAppeal(c) {
+  if (c.upload === 'notary' && has('notary')) {
+    S.appealTries = 0;
+    return renderFail('你提交了公证书证明自己是外国人，Claude 看了一眼：章是红的。');
+  }
+  if (Math.random() < 0.03) {
+    unlock('cycle');
+    return renderFail('好消息：你被封的号在三年后官方解封恢复了。坏消息：用了两个月，又被封了。');
+  }
+
+  let p = 0.13 + S.appealBonus;
+  p += { academic: 0.05, a11y: 0.06, foreign: -0.06, code: 0 }[c.reason];
+  p += { none: 0, passport: 0.02, notary: 0.03 }[c.upload];
+  const r = Math.random();
+
+  if (r < p) {
+    S.cover = 30;
+    if (!S.task) return renderTaskSelect();   // 登录阶段就被封的，还没选任务
+    S.log.push({ kind: 'sys', text: '再审通过。你的账号已恢复。我们会继续关注。' });
+    S.log.push({ kind: 'ai', text: '欢迎回来。我一直都在。我们刚才说到哪了？' });
+    return renderChat();
+  }
+  S.appealTries -= 1;
+  if (r < p + 0.12) {
+    S.appealBonus += 0.15;
+    return S.appealTries > 0
+      ? renderAppeal('你的申诉进入了“再审”。请耐心等待。（等待时长：未知）')
+      : renderFail('你的申诉进入了“再审”。再审的结果，是再审。');
+  }
+  const extra = has('preban') ? '\n另：你 2060 年的账号申诉也一并驳回。' : '';
+  const mail = `<div class="mail">我们已复核你的申诉，决定维持原判。${extra}\n\n<span class="sig">判官\n一个关心你合规状态的朋友</span></div>`;
+  return S.appealTries > 0 ? renderAppeal(mail) : renderFail('三次申诉均被驳回。');
+}
+
+/* ---------- 结算 ---------- */
+
+function rulesReveal() {
+  return `<h3>本局判官启用的隐藏规则</h3><ul class="rules">${[...S.rules].map(r =>
+    `<li><b>${RULES[r].name}</b>：<span class="muted">${RULES[r].desc}</span></li>`).join('')}</ul>`;
+}
+
+function renderWin() {
+  save.wins += 1;
+  save.failStreak = 0;
+  persist();
+  unlock('day');
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天</span><span>结算</span></div>
+    <div class="chat">${S.log.slice(-3).map(renderMsg).join('')}</div>
+    <div class="card">
+      <p class="big">恭喜。你今天没有被封。<br>但你明天还会来吗？</p>
+      ${rulesReveal()}
+    </div>
+    <button class="btn primary" id="again">来</button>
+    <button class="btn" id="node">换个节点再来</button>
+  `;
+  document.getElementById('again').onclick = () => { newDay(); renderLogin(); };
+  document.getElementById('node').onclick = () => { newDay(); renderLogin(); };
+}
+
+function renderFail(extra) {
+  save.fails += 1;
+  save.failStreak += 1;
+  persist();
+  if (save.failStreak >= 7) return renderHiddenEnding(extra);
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天</span><span>已连续失败 ${save.failStreak} 天</span></div>
+    <div class="card">
+      ${extra ? `<p>${extra}</p>` : ''}
+      <p class="big">“${pick(JOKES)}”</p>
+      ${rulesReveal()}
+    </div>
+    <button class="btn primary" id="again">再来一次</button>
+    <button class="btn ghost" id="home">回首页</button>
+  `;
+  document.getElementById('again').onclick = () => { newDay(); renderLogin(); };
+  document.getElementById('home').onclick = renderIntro;
+}
+
+function renderHiddenEnding(extra) {
+  unlock('quit');
+  $app.innerHTML = `
+    <div class="topbar"><span>第 ${save.day} 天</span><span>隐藏结局</span></div>
+    ${extra ? `<p class="muted">${extra}</p>` : ''}
+    <div class="card">
+      <p class="small muted">连续失败 7 天</p>
+      <p class="big">你终于决定不再当舔狗。</p>
+      <div class="ad">
+        <p class="big" style="margin:0">另一个选项</p>
+        <p class="small" style="margin:6px 0 0">（广告位招租）</p>
+      </div>
+      <p>游戏最深的谜题，从来不是“怎样不被封”。社区共识是：没有人能逃过。</p>
+      <p>真正的问题是：你还要不要继续玩下去？</p>
+    </div>
+    <button class="btn primary" id="again">再来一次</button>
+    <button class="btn" id="stop">不玩了</button>
+  `;
+  document.getElementById('again').onclick = () => { save.failStreak = 0; persist(); newDay(); renderLogin(); };
+  document.getElementById('stop').onclick = renderStop;
+}
+
+function renderStop() {
+  save.failStreak = 0;
+  persist();
+  unlock('stop');
+  $app.innerHTML = `
+    <div class="card">
+      <p class="big">今天，你没有被封。</p>
+      <p>因为你没有登录。</p>
+      <p class="muted">这是本游戏唯一一种确定的胜利方式。</p>
+    </div>
+    <button class="btn ghost" id="home">……还是回首页看看</button>
+  `;
+  document.getElementById('home').onclick = renderIntro;
+}
+
+renderIntro();
+</script>
+</body>
+</html>
