@@ -385,17 +385,16 @@ function newDay() {
 }
 const has = r => S.rules.has(r);
 
-// 判官扣分。精确数值永远不给玩家看。
+// 判官默默扣分，不告诉玩家扣了什么、扣了多少；最后一条理由只写进封号邮件。
 function hit(amount, text) {
   S.cover -= Math.round(amount);
-  if (text) S.log.push({ kind: 'sys', text, delta: -1 });
+  if (text) S.lastReason = text;
 }
-function heal(amount, text) {
+function heal(amount) {
   S.cover = Math.min(100, S.cover + amount);
-  if (text) S.log.push({ kind: 'sys', text, delta: 1 });
 }
 function note(text) { S.log.push({ kind: 'sys', text }); }
-const lastSysText = () => { const s = S.log.filter(m => m.kind === 'sys' && m.delta < 0).pop(); return s ? s.text : '原因不明。'; };
+const lastSysText = () => S.lastReason || '原因不明。';
 
 /* ======================================================================
  * 首页
@@ -419,9 +418,7 @@ function renderIntro() {
     <div class="card">
       <h2>规则（你知道的部分）</h2>
       <p>你有一个隐形的<b>伪装值</b>。每个操作、每句话、每个环境信号都可能扣分。归零，封号邮件到达。你看不到数值，只能看 Claude 的语气：“当然可以” → “好的，我来帮你” → “我理解你的需求” → “你其实可以用中文的”。</p>
-      <p>判官每天从 <b>16 条</b>封号理由里随机启用 3–5 条。每个“稳妥”选项都有固定代价，你不可能全选稳妥——必须<b>推理</b>今天哪些规则开着，然后赌。</p>
-      <p>线索：登录前的<b>互助群</b>（老人比新人靠谱，但都不一定对）、对话中的<b>试探判官</b>（一定是真的，但浪费一条额度）。活过一天后猜中规则，能让判官对你的印象变淡。</p>
-      <p>号活得越久，判官越严。伪装值没回满的部分，会变成第二天的印象。</p>
+      <p>判官每天从 <b>16 条</b>封号理由里随机启用几条。没有人告诉你是哪几条。</p>
     </div>
     <button class="btn primary" id="start">${a ? `开始账号第 ${a.age + 1} 天` : '注册并开始'}</button>
     ${save.failStreak > 0 ? `<p class="small muted">已连续失败 ${save.failStreak} 天。</p>` : ''}
@@ -459,10 +456,8 @@ function renderGroup() {
   $app.innerHTML = `
     <div class="topbar"><span>账号第 ${a.age + 1} 天 · 登录前</span><span>互助群（500 人，${rand(3, 40)} 人还活着）</span></div>
     <h2>互助群</h2>
-    <p class="muted">登录前先看看群里怎么说。记住：老人比新人靠谱，截图来源不明。今天判官启用了 ${S.rules.size} 条规则。</p>
+    <p class="muted">登录前先看看群里怎么说。</p>
     <div class="chat group">${S.group.map(m => `<div class="msg ai"><div class="who">${esc(m.who)}</div>${esc(m.text)}</div>`).join('')}</div>
-    ${a.age >= 3 ? '<p class="small muted">群公告：A记 今天可能更新《使用政策》，规则会在白天多一条。</p>' : ''}
-    ${S.strict > 1 ? '<p class="small muted">群公告：判官升级了，所有检查都更严了。</p>' : ''}
     <button class="btn primary" id="go">去登录</button>
   `;
   on('go', renderLogin);
@@ -489,7 +484,6 @@ function renderLogin() {
   $app.innerHTML = `
     <div class="topbar"><span>账号第 ${acct().age + 1} 天 · 关卡 1 / 3</span><span>登录</span></div>
     <h2>关卡 1：登录</h2>
-    <p class="muted">每个“稳妥”选项都有代价，全选稳妥你会在登录时就把伪装值花掉一半。看情报，选你敢赌的那几项。</p>
     <div class="card" id="form">${chipRows(LOGIN_FIELDS, null, 'random')}</div>
     <button class="btn primary" id="login">登录</button>
     <button class="btn ghost" id="back">再看一眼群</button>
@@ -579,7 +573,7 @@ function renderTaskSelect() {
     <div class="topbar"><span>账号第 ${acct().age + 1} 天 · 关卡 2 / 3</span><span>对话</span></div>
     <div class="card">
       <p class="big">你还活着。目前。</p>
-      <p class="muted">今日额度 ${S.quota} 条。要做完一件事，需要 ${S.need} 步有效进展。长段落、速打、粘贴推进更快，但代价也更大。</p>
+      <p class="muted">今日额度 ${S.quota} 条。要做完一件事，需要 ${S.need} 步进展。</p>
       <div class="row">${Object.entries(TASKS).map(([k, t]) => `<button class="btn" data-t="${k}">${t.label}</button>`).join('')}</div>
     </div>
   `;
@@ -632,8 +626,7 @@ function toneOpener() {
 
 function renderMsg(m) {
   if (m.kind === 'sys') {
-    const d = m.delta ? ` <b class="${m.delta > 0 ? 'up' : ''}">伪装值 ${m.delta > 0 ? '+' : '−'}??</b>` : '';
-    return `<div class="msg sys">判官：${esc(m.text)}${d}</div>`;
+    return `<div class="msg sys">${esc(m.text)}</div>`;
   }
   if (m.kind === 'ai') return `<div class="msg ai"><div class="who">Claude</div>${esc(m.text)}</div>`;
   return `<div class="msg me">${esc(m.text)}</div>`;
@@ -739,7 +732,7 @@ function sendRound() {
     S.policyFired = true;
     const extra = pick(RULE_IDS.filter(r => !S.rules.has(r)));
     S.rules.add(extra);
-    note('A记 更新了《使用政策》，即刻生效。（多了一条规则）');
+    note('A记 更新了《使用政策》，即刻生效。');
   }
 
   if (S.cover <= 0) {
@@ -819,7 +812,7 @@ const EVENTS = [
   { id: 'mom', title: '妈妈打来了微信视频。', opts: [
     ['接（她会用方言喊你名字）', () => hit(has('nostalgia') ? 45 : 15, has('nostalgia') ? '乡愁侧写：麦克风收到了“吃饭了没”。' : '麦克风收到了一段方言。')],
     ['挂断，回一句“在忙”', () => hit(has('ime') ? 30 : 4, has('ime') ? '你切回中文输入法打了“在忙”。幽灵字符又多了两个。' : '')],
-    ['静音不理', () => { S.heatAdd += 8; note('妈妈很担心。明天的你会更累。'); }],
+    ['静音不理', () => { S.heatAdd += 8; note('妈妈很担心。'); }],
   ] },
   { id: 'drop', title: '节点掉线了。', opts: [
     ['让客户端自动切换', () => hit(35, '自动切换到了香港节点。')],
