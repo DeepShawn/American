@@ -18,7 +18,7 @@
 
 `android/` 是一个原生安卓工程（Java + 系统 WebView，零第三方依赖、不申请网络权限、离线可玩）。构建时会把根目录的 `index.html` 打进 APK，网页版和安卓版始终是同一份游戏。
 
-- **下载**：每次推送后，在 Actions → *Build Android APK (arm64-v8a)* 的运行结果里下载 `bubeifeng-arm64-v8a`；推送 `v*` 标签（如 `v1.0.0`）会自动创建 Release 并附上 APK。
+- **下载**：每次推送后，在 Actions → *Build Android APK (arm64-v8a)* 的运行结果里下载 `bubeifeng-arm64-v8a`；推送 `v*` 标签（如 `v1.0.0`），或手动运行该工作流并填写 `release_tag`，会创建 Release 并附上 APK。
 - **本地构建**：需要 JDK 17 与 Android SDK（API 35）。
   ```sh
   cd android
