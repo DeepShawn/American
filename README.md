@@ -8,6 +8,25 @@
 
 直接用浏览器打开 `index.html` 即可，无需构建、无外部依赖。手机宽度可玩。
 
+### 网页版：GitHub Pages
+
+`.github/workflows/pages.yml` 在默认分支上 `index.html` 变动时自动发布。
+
+首次使用需要在仓库 **Settings → Pages → Build and deployment → Source** 选 **GitHub Actions**，然后在 Actions 里重跑一次该工作流。发布地址：`https://deepshawn.github.io/American/`
+
+### 安卓版（arm64-v8a）
+
+`android/` 是一个原生安卓工程（Java + 系统 WebView，零第三方依赖、不申请网络权限、离线可玩）。构建时会把根目录的 `index.html` 打进 APK，网页版和安卓版始终是同一份游戏。
+
+- **下载**：每次推送后，在 Actions → *Build Android APK (arm64-v8a)* 的运行结果里下载 `bubeifeng-arm64-v8a`；推送 `v*` 标签（如 `v1.0.0`）会自动创建 Release 并附上 APK。
+- **本地构建**：需要 JDK 17 与 Android SDK（API 35）。
+  ```sh
+  cd android
+  ./gradlew assembleRelease   # 产物：app/build/outputs/apk/release/app-release.apk
+  ```
+- **签名**：默认使用 debug 签名（每次 CI 构建签名不同，覆盖安装前需先卸载旧版）。要固定签名，在仓库 Secrets 中配置 `KEYSTORE_BASE64`（`base64 -w0 release.jks`）、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`。
+- 最低支持 Android 8.0（API 26），`abiFilters` 限定为 `arm64-v8a`。
+
 ## 玩法
 
 - **伪装值**：隐形，从 100 开始，归零即封号。只能从 Claude 的语气反推：

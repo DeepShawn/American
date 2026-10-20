@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 游戏本体只有一份：仓库根目录的 index.html（GitHub Pages 用的也是它），构建时拷进 assets。
+def webAssets = layout.buildDirectory.dir('generated/webAssets').get().asFile
+def copyWebGame = tasks.register('copyWebGame', Copy) {
+    from rootProject.file('../index.html')
+    into webAssets
+}
+preBuild.dependsOn copyWebGame
+
+// 提供了 KEYSTORE_* 环境变量（CI 里来自仓库 Secrets）就用正式签名，否则退回 debug 签名。
+def releaseKeystore = System.getenv('KEYSTORE_FILE')
+
+android {
+    namespace 'ai.bubeifeng.game'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'ai.bubeifeng.game'
+        minSdk 26
+        targetSdk 35
+        versionCode Integer.parseInt(System.getenv('VERSION_CODE') ?: '1')
+        versionName System.getenv('VERSION_NAME') ?: '1.0.0'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    sourceSets {
+        main.assets.srcDir webAssets
+    }
+
+    signingConfigs {
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
