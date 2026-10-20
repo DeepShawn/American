@@ -407,18 +407,12 @@ function renderIntro() {
   $app.innerHTML = `
     <div class="topbar"><span>A记 · Claude · 判官</span><span>已经历 ${save.day} 天</span></div>
     <h1>不被封的一天</h1>
-    <p class="muted">你是一个身处“不支持地区”的普通用户。每一天的目标只有一个：在 A记 的 Claude 风控眼皮底下，用今天的额度做完一件正常的事，并且号还活着。</p>
     <div class="card">
       ${a ? `<p><b>当前账号</b>：${esc(a.name)}</p>
         <div class="stats"><div><b>${a.age}</b><span class="small muted">存活天数</span></div>
         <div><b>${heatLabel(a.heat)}</b><span class="small muted">判官对你的印象</span></div>
         <div><b>${save.best}</b><span class="small muted">最长存活纪录</span></div></div>`
       : `<p>你还没有账号。注册一个吧——这是第 ${save.accounts + 1} 个。</p>`}
-    </div>
-    <div class="card">
-      <h2>规则（你知道的部分）</h2>
-      <p>你有一个隐形的<b>伪装值</b>。每个操作、每句话、每个环境信号都可能扣分。归零，封号邮件到达。你看不到数值，只能看 Claude 的语气：“当然可以” → “好的，我来帮你” → “我理解你的需求” → “你其实可以用中文的”。</p>
-      <p>判官每天从 <b>16 条</b>封号理由里随机启用几条。没有人告诉你是哪几条。</p>
     </div>
     <button class="btn primary" id="start">${a ? `开始账号第 ${a.age + 1} 天` : '注册并开始'}</button>
     ${save.failStreak > 0 ? `<p class="small muted">已连续失败 ${save.failStreak} 天。</p>` : ''}
